@@ -28,6 +28,7 @@ an alternative to texture atlases,
 [glyphy](http://glyphy.org), or
 [Loop-Blinn](http://http.developer.nvidia.com/GPUGems3/gpugems3_ch25.html).
 
+To compile, you will need to link to [FreeType](http://freetype.org).
 
 _Edmund Kapusniak_
 
