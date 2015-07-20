@@ -9,12 +9,15 @@
 #include "font_slicer.h"
 #include <make_unique.h>
 #include <list>
+#include <stringf.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_IMAGE_H
 #include FT_OUTLINE_H
 
+
+#undef DEBUG_SWEEP
 
 
 /*
@@ -843,7 +846,8 @@ static void sweep_plane( path* path )
     {
         path_vertex* corner = corners[ i ];
 
-/*
+
+#ifdef DEBUG_SWEEP
         printf( "corner %p %g %g\n", corner, corner->p.x, corner->p.y );
         for ( auto i = edges.begin(); i != edges.end(); ++i )
         {
@@ -890,7 +894,7 @@ static void sweep_plane( path* path )
                 printf( "%g %g\n", i->edge->v[ 1 ]->p.x, i->edge->v[ 1 ]->p.y );
             }
         }
-*/
+#endif
 
 
         // Check if corner is connected to existing edge.
@@ -917,7 +921,11 @@ static void sweep_plane( path* path )
                               +
                     
                     */
-                    
+
+#ifdef DEBUG_SWEEP
+                    printf( "END INTERVAL\n" );
+#endif
+
                     sweep_slice( path, e, &*j, corner );
                     
                 }
@@ -931,6 +939,10 @@ static void sweep_plane( path* path )
                           ####+####
                     */
                     
+#ifdef DEBUG_SWEEP
+                    printf( "END HOLE\n" );
+#endif
+
                     auto h = i; --h;
                     auto k = j; ++k;
 
@@ -956,6 +968,10 @@ static void sweep_plane( path* path )
                             |##
                     */
                     
+#ifdef DEBUG_SWEEP
+                    printf( "LEFT\n" );
+#endif
+                    
                     sweep_slice( path, e, &*j, corner );
                 }
                 else
@@ -965,6 +981,10 @@ static void sweep_plane( path* path )
                           ##+
                           ##|
                     */
+
+#ifdef DEBUG_SWEEP
+                    printf( "RIGHT\n" );
+#endif
                     
                     auto h = i; --h;
                     sweep_slice( path, &*h, e, corner );
@@ -1014,7 +1034,7 @@ static void sweep_plane( path* path )
                     e->edge = e->edge->v[ 0 ]->e[ 0 ];
                     if ( e->edge == original )
                     {
-                        // Not sure how we get here.
+                        // Bad case.
                         break;
                     }
                 }
@@ -1026,7 +1046,7 @@ static void sweep_plane( path* path )
                     e->edge = e->edge->v[ 1 ]->e[ 1 ];
                     if ( e->edge == original )
                     {
-                        // Not sure how we get here.
+                        // Bad case.
                         break;
                     }
                 }
@@ -1056,6 +1076,10 @@ static void sweep_plane( path* path )
                   ###/ \###
                   ##/   \##
             */
+            
+#ifdef DEBUG_SWEEP
+            printf( "START HOLE\n" );
+#endif
 
             auto j = after;
             auto i = after; --i;
@@ -1074,32 +1098,15 @@ static void sweep_plane( path* path )
                     /###\
             */
             
+#ifdef DEBUG_SWEEP
+            printf( "START INTERVAL\n" );
+#endif
+            
             is_hole = false;
         }
         
         
-        // Work out which edge is to the left.
-        float2 e0;
-        switch ( corner->e[ 0 ]->kind )
-        {
-        case PATH_LINE_TO:  e0 = corner->e[ 0 ]->v[ 0 ]->p; break;
-        case PATH_QUAD_TO:  e0 = corner->e[ 0 ]->c[ 0 ]; break;
-        case PATH_CUBIC_TO: e0 = corner->e[ 0 ]->c[ 1 ]; break;
-        default: break;
-        }
-        
-        float2 e1;
-        switch ( corner->e[ 1 ]->kind )
-        {
-        case PATH_LINE_TO:  e1 = corner->e[ 1 ]->v[ 1 ]->p; break;
-        case PATH_QUAD_TO:  e1 = corner->e[ 1 ]->c[ 0 ]; break;
-        case PATH_CUBIC_TO: e1 = corner->e[ 1 ]->c[ 0 ]; break;
-        default: break;
-        }
-        
-        e0 = normalize( e0 - corner->p );
-        e1 = normalize( e1 - corner->p );
-
+        // corner->e[ 0 ] and corner->[ 1 ] are new edges.
         sweep_edge left;
         left.top = corner;
         left.edge = corner->e[ 0 ];
@@ -1124,10 +1131,36 @@ static void sweep_plane( path* path )
             right.corner = right.corner->e[ 1 ]->v[ 1 ];
         }
 
-        if ( e0.x > e1.x )
+        
+        // Work out which edge is to the left.  If we get this wrong then
+        // the topology of the figure breaks and we get corrupted slices or
+        // encounter the bad case above.
+        float a = corner->e[ 0 ]->v[ 0 ]->p.x;
+        float b = corner->e[ 1 ]->v[ 1 ]->p.x;
+
+        if ( corner->e[ 0 ]->v[ 0 ] == corner->e[ 1 ]->v[ 1 ] )
+        {
+            // Look at control point closest to corner.
+            switch ( corner->e[ 0 ]->kind )
+            {
+            case PATH_QUAD_TO:  a = corner->e[ 0 ]->c[ 0 ].x; break;
+            case PATH_CUBIC_TO: a = corner->e[ 0 ]->c[ 1 ].x; break;
+            default: break;
+            }
+            
+            switch ( corner->e[ 1 ]->kind )
+            {
+            case PATH_QUAD_TO:  b = corner->e[ 1 ]->c[ 0 ].x; break;
+            case PATH_CUBIC_TO: b = corner->e[ 1 ]->c[ 0 ].x; break;
+            default: break;
+            }
+        }
+
+        if ( a > b )
         {
             std::swap( left, right );
         }
+
         
         if ( is_hole )
             right.left = true;
@@ -1388,6 +1421,86 @@ static void approx( path* path )
 
 
 
+/*
+    Write out a path as SVG.
+*/
+
+static void write_svg( path* path, const char* filename )
+{
+    FILE* f = fopen( filename, "w" );
+    fprintf( f, "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\">\n" );
+    
+    fprintf( f, "  <path stroke=\"black\" stroke-width=\"5\" fill=\"none\" d=\"\n" );
+    for ( size_t i = 0; i < path->p.size(); )
+    {
+        const path_event& e = path->p.at( i++ );
+        switch ( e.kind )
+        {
+        case PATH_END:
+            break;
+            
+        case PATH_MOVE_TO:
+        {
+            float2 p = path->p.at( i++ ).p;
+            fprintf( f, "    M %g %g\n", p.x, p.y );
+            break;
+        }
+        
+        case PATH_LINE_TO:
+        {
+            float2 p = path->p.at( i++ ).p;
+            fprintf( f, "    L %g %g\n", p.x, p.y );
+            break;
+        }
+        
+        case PATH_QUAD_TO:
+        {
+            float2 a = path->p.at( i++ ).p;
+            float2 p = path->p.at( i++ ).p;
+            fprintf( f, "    Q %g %g %g %g\n", a.x, a.y, p.x, p.y );
+            break;
+        }
+        
+        case PATH_CUBIC_TO:
+        {
+            float2 a = path->p.at( i++ ).p;
+            float2 b = path->p.at( i++ ).p;
+            float2 p = path->p.at( i++ ).p;
+            fprintf( f, "    C %g %g %g %g %g %g\n", a.x, a.y, b.x, b.y, p.x, p.y );
+            break;
+        }
+        
+        }
+    }
+    fprintf( f, "  />\n" );
+    
+    for ( const auto& vertex : path->v )
+    {
+        if ( ! vertex->is_corner )
+            continue;
+        fprintf( f, "  <circle cx=\"%g\" cy=\"%g\" r=\"20\" "
+            "stroke=\"red\" stroke-width=\"5\" fill=\"none\" />\n",
+                vertex->p.x, vertex->p.y );
+    }
+    
+    for ( const auto& slice : path->s )
+    {
+        fprintf( f, "  <path stroke=\"blue\" stroke-width=\"5\" fill=\"none\" "
+            "d=\"M %g %g L %g %g L %g %g L %g %g Z\" />\n",
+                slice.tl->p.x, slice.tl->p.y,
+                slice.tr->p.x, slice.tr->p.y,
+                slice.br->p.x, slice.br->p.y,
+                slice.bl->p.x, slice.bl->p.y );
+                
+    }
+    
+    fprintf( f, "</svg>\n" );
+    fclose( f );
+}
+
+
+
+
 
 
 
@@ -1497,7 +1610,7 @@ font_glyph font_slicer::glyph_info( size_t index )
 
 font_glyph font_slicer::glyph_info_for_char( char32_t c )
 {
-//    printf( "%c\n", (char)c );
+//    printf( "***** %c\n", (char)c );
 
     // Load character image.
     FT_Load_Char( p->face, c, FT_LOAD_NO_SCALE );
@@ -1511,6 +1624,11 @@ font_glyph font_slicer::glyph_info_for_char( char32_t c )
     build_polygon( &path );
     find_corners( &path );
     sweep_plane( &path );
+
+    // Debug.
+//    write_svg( &path, stringf( "c%02X.svg", (int)c ).c_str() );
+    
+
     approx( &path );
     
     // Return sliced glyph.
