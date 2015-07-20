@@ -1006,11 +1006,17 @@ static void sweep_plane( path* path )
             sweep_edge* e = &*after;
         
             // Follow edge until we found one that intersects the plane.
+            path_edge* original = e->edge;
             if ( e->reversed )
             {
                 while ( e->edge->v[ 0 ]->p.y < corner->p.y )
                 {
                     e->edge = e->edge->v[ 0 ]->e[ 0 ];
+                    if ( e->edge == original )
+                    {
+                        // Not sure how we get here.
+                        break;
+                    }
                 }
             }
             else
@@ -1018,6 +1024,11 @@ static void sweep_plane( path* path )
                 while ( e->edge->v[ 1 ]->p.y < corner->p.y )
                 {
                     e->edge = e->edge->v[ 1 ]->e[ 1 ];
+                    if ( e->edge == original )
+                    {
+                        // Not sure how we get here.
+                        break;
+                    }
                 }
             }
 
@@ -1486,8 +1497,13 @@ font_glyph font_slicer::glyph_info( size_t index )
 
 font_glyph font_slicer::glyph_info_for_char( char32_t c )
 {
+//    printf( "%c\n", (char)c );
+
     // Load character image.
     FT_Load_Char( p->face, c, FT_LOAD_NO_SCALE );
+    
+    // Make it bolder.
+//    FT_Outline_Embolden( &p->face->glyph->outline, 1 * ( 1 << 6 ) );
 
     // Process path.
     path path;
