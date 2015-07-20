@@ -39,6 +39,7 @@ protected:
     virtual void invalidate();
 
     virtual rect bounds();
+    virtual rect ogl_bounds();
 
     virtual void setup_context( ogl_context* ogl );
     virtual void draw( ogl_context* ogl );

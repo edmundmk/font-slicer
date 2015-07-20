@@ -279,6 +279,8 @@ private:
     GLuint ibo;
     
     GLuint fbo;
+    GLsizei texture_width;
+    GLsizei texture_height;
     GLuint texture;
     
     GLuint blit_vao;
@@ -485,9 +487,11 @@ void fe_glcanvas::setup_context( ogl_context* ogl )
     ogl->glBindBuffer( GL_ARRAY_BUFFER, 0 );
     ogl->glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
     
+    texture_width = 1920;
+    texture_height = 1080;
     ogl->glGenTextures( 1, &texture );
     ogl->glBindTexture( GL_TEXTURE_2D, texture );
-    ogl->glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, 1920, 1080, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL );
+    ogl->glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texture_width, texture_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL );
     ogl->glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
     ogl->glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
     ogl->glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
@@ -525,14 +529,22 @@ void fe_glcanvas::setup_context( ogl_context* ogl )
 
 void fe_glcanvas::draw( ogl_context* ogl )
 {
-    rect viewport = bounds();
+    rect viewport = ogl_bounds();
 
+    if ( texture_width < viewport.width() || texture_height < viewport.height() )
+    {
+        texture_width = (GLsizei)viewport.width();
+        texture_height = (GLsizei)viewport.height();
+        ogl->glBindTexture( GL_TEXTURE_2D, texture );
+        ogl->glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texture_width, texture_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL );
+        ogl->glBindTexture( GL_TEXTURE_2D, 0 );
+    }
+    
     ogl->glBindFramebuffer( GL_FRAMEBUFFER, fbo );
 
     ogl->glViewport( 0.0f, 0.0f, viewport.width(), viewport.height() );
     ogl->glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
     ogl->glClear( GL_COLOR_BUFFER_BIT );
-    
     
     // Transform into viewport coordinates (same coordinates as gl_FragCoord,
     // origin lower left, one pixel is one unit).
@@ -604,8 +616,8 @@ void fe_glcanvas::draw( ogl_context* ogl )
     
     ogl->glViewport( 0.0f, 0.0f, viewport.width(), viewport.height() );
     
-    float tw = viewport.width() / 1920.0f;
-    float th = viewport.height() / 1080.0f;
+    float tw = viewport.width() / texture_width;
+    float th = viewport.height() / texture_height;
     
     const blit_vertex v[] =
     {

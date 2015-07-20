@@ -104,6 +104,18 @@ rect uic_glcanvas::bounds()
     );
 }
 
+rect uic_glcanvas::ogl_bounds()
+{
+    NSRect frame = [p->view convertRectToBacking:[p->view frame]];
+    return rect
+    (
+        NSMinX( frame ),
+        NSMinY( frame ),
+        NSMaxX( frame ),
+        NSMaxY( frame )
+    );
+}
+
 
 void uic_glcanvas::setup_context( ogl_context* ogl )
 {
@@ -168,7 +180,10 @@ void uic_glcanvas_impl::on_zoom( float2 p, float amount )
     NSOpenGLPixelFormat* format =
             [[NSOpenGLPixelFormat alloc] initWithAttributes:attributes];
 
-    return [self initWithFrame:NSMakeRect( 0, 0, 10, 10 ) pixelFormat:format];
+    self = [self initWithFrame:NSMakeRect( 0, 0, 10, 10 ) pixelFormat:format];
+    [self setWantsBestResolutionOpenGLSurface:YES];
+
+    return self;
 }
 
 
