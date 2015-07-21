@@ -1296,28 +1296,32 @@ static void sweep_plane( path* path )
             right.corner = right.corner->e[ 1 ]->v[ 1 ];
         }
 
-        
+
         // Work out which edge is to the left.  If we get this wrong then
         // the topology of the figure breaks and we get corrupted slices or
         // encounter the bad case above.
-        float a, b;
         
         // Look at control point closest to corner.
+        float2 tleft;
         switch ( corner->e[ 0 ]->kind )
         {
-        default:            a = corner->e[ 0 ]->v[ 0 ]->p.x;    break;
-        case PATH_QUAD_TO:  a = corner->e[ 0 ]->c[ 0 ].x;       break;
-        case PATH_CUBIC_TO: a = corner->e[ 0 ]->c[ 1 ].x;       break;
+        default:            tleft = corner->e[ 0 ]->v[ 0 ]->p;      break;
+        case PATH_QUAD_TO:  tleft = corner->e[ 0 ]->c[ 0 ];         break;
+        case PATH_CUBIC_TO: tleft = corner->e[ 0 ]->c[ 1 ];         break;
         }
         
+        float2 tright;
         switch ( corner->e[ 1 ]->kind )
         {
-        default:            b = corner->e[ 1 ]->v[ 1 ]->p.x;    break;
-        case PATH_QUAD_TO:  b = corner->e[ 1 ]->c[ 0 ].x;       break;
-        case PATH_CUBIC_TO: b = corner->e[ 1 ]->c[ 0 ].x;       break;
+        default:            tright = corner->e[ 1 ]->v[ 1 ]->p;     break;
+        case PATH_QUAD_TO:  tright = corner->e[ 1 ]->c[ 0 ];        break;
+        case PATH_CUBIC_TO: tright = corner->e[ 1 ]->c[ 0 ];        break;
         }
 
-        if ( a > b )
+        tleft = normalize( tleft - corner->p );
+        tright = normalize( tright - corner->p );
+
+        if ( tleft.x > tright.x )
         {
             std::swap( left, right );
         }
@@ -1346,6 +1350,7 @@ static void sweep_plane( path* path )
                 path_vertex* v = corner;
                 do
                 {
+//                    printf( "  NO CORNER: %p %g %g\n", v, v->p.x, v->p.y );
                     v->is_corner = false;
                     v = v->e[ 1 ]->v[ 1 ];
                 }
@@ -1805,7 +1810,7 @@ font_glyph font_slicer::glyph_info_for_char( char32_t c )
     FT_Load_Char( p->face, c, FT_LOAD_NO_SCALE );
     
     // Make it bolder.
-//    FT_Outline_Embolden( &p->face->glyph->outline, 4 * ( 1 << 6 ) / 2 );
+//    FT_Outline_Embolden( &p->face->glyph->outline, 5 * ( 1 << 6 ) / 2 );
 
     // Process path.
     path path;
