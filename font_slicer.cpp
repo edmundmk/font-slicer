@@ -689,6 +689,7 @@ static bool intersect( path* path, path_edge* a, path_edge* b )
 
 static void self_intersect( path* path, path_vertex* o )
 {
+restart:
     path_edge* e = o->e[ 1 ];
     while ( true )
     {
@@ -698,8 +699,7 @@ static void self_intersect( path* path, path_vertex* o )
             if ( intersect( path, d, e ) )
             {
                 // Restart after intersection.
-                e = o->e[ 1 ];
-                continue;
+                goto restart;
             }
         }
     
