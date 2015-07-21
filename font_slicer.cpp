@@ -7,9 +7,11 @@
 
 
 #include "font_slicer.h"
-#include <make_unique.h>
 #include <list>
+#include <unordered_set>
+#include <make_unique.h>
 #include <stringf.h>
+#include <rect.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -17,7 +19,7 @@
 #include FT_OUTLINE_H
 
 
-#undef DEBUG_SWEEP
+//#define DEBUG_SWEEP
 
 
 /*
@@ -25,8 +27,6 @@
     where the top and bottom edges are horizontal lines, and the left and
     right edges are quadratic bezier curves.
     
-    We assume an outline with no intersections.
- 
     Process:
         Find corner points (where the tangent is discontinuous).
         Find vertical extremes (apex and nadir of curves), splitting outline.
@@ -145,6 +145,7 @@ struct path
     long maxy;
     
     std::vector< path_event > p;
+    std::vector< path_vertex* > o;
     std::vector< std::unique_ptr< path_vertex > > v;
     std::vector< std::unique_ptr< path_edge > > e;
     std::vector< path_slice > s;
@@ -286,6 +287,7 @@ static void build_polygon( path* path )
             if ( ! first )
             {
                 first = v.get();
+                path->o.push_back( v.get() );
             }
             
             if ( edge )
@@ -333,6 +335,8 @@ static void build_polygon( path* path )
     }
 
 }
+
+
 
 
 
@@ -618,6 +622,108 @@ static float solve_edge( path_edge* e, float y )
 
 
 /*
+    Split outlines at self-intersections.
+*/
+
+static cbezier edge_to_bezier( path_edge* e )
+{
+    switch ( e->kind )
+    {
+    case PATH_LINE_TO:
+        return lbezier( e->v[ 0 ]->p, e->v[ 1 ]->p );
+    case PATH_QUAD_TO:
+        return qbezier( e->v[ 0 ]->p, e->c[ 0 ], e->v[ 1 ]->p );
+    case PATH_CUBIC_TO:
+        return cbezier( e->v[ 0 ]->p, e->c[ 0 ], e->c[ 1 ], e->v[ 1 ]->p );
+    default:
+        return cbezier();
+    }
+}
+
+static bool intersect( path* path, path_edge* a, path_edge* b )
+{
+    cbezier a_bezier = edge_to_bezier( a );
+    cbezier b_bezier = edge_to_bezier( b );
+    std::pair< float, float > t[ 9 ];
+    if ( solve_intersection( a_bezier, b_bezier, t ) == 0 )
+        return false;
+    
+    // Split at the intersection.
+    if (    ! split_edge( path, a, t[ 0 ].first )
+         || ! split_edge( path, b, t[ 0 ].second ) )
+        return false;
+    
+    /*
+                    a
+                    v
+           b_next   |   b
+                 <--+---.
+                    |    |
+                    \    /
+                     '''+
+                  a_next
+    */
+    
+    // a is before b in the outline.
+    path_edge* a_next = a->v[ 1 ]->e[ 1 ];
+    path_edge* b_next = b->v[ 1 ]->e[ 1 ];
+    path_vertex* outer = a->v[ 1 ];
+    path_vertex* inner = b->v[ 1 ];
+
+    // Outer loop continues a_prev -> outer -> b_next.
+    outer->e[ 1 ] = b_next;
+    b_next->v[ 0 ] = outer;
+    
+    // Inner loop continues b_prev -> inner -> a_next.
+    inner->e[ 1 ] = a_next;
+    a_next->v[ 0 ] = inner;
+    
+    // And the inner loop is an independent outline.
+    path->o.push_back( inner );
+    
+    inner->is_corner = true;
+    outer->is_corner = true;
+    
+    return true;
+}
+
+static void self_intersect( path* path, path_vertex* o )
+{
+    path_edge* e = o->e[ 1 ];
+    while ( true )
+    {
+        // Intersect edge with all edges before it.
+        for ( path_edge* d = o->e[ 1 ]; d != e; d = d->v[ 1 ]->e[ 1 ] )
+        {
+            if ( intersect( path, d, e ) )
+            {
+                // Restart after intersection.
+                e = o->e[ 1 ];
+                continue;
+            }
+        }
+    
+        // Move to next edge.
+        e = e->v[ 1 ]->e[ 1 ];
+        if ( e == o->e[ 1 ] )
+        {
+            break;
+        }
+    }
+}
+
+static void self_intersect( path* path )
+{
+    for ( size_t i = 0; i < path->o.size(); ++i )
+    {
+        self_intersect( path, path->o.at( i ) );
+    }
+}
+
+
+
+
+/*
     Analyze shape to identify corner points (including splitting y-extremes).
 */
 
@@ -815,6 +921,7 @@ static void sweep_slice(
 }
 
 
+
 static void sweep_plane( path* path )
 {
     // Sort corners.
@@ -845,6 +952,8 @@ static void sweep_plane( path* path )
     for ( size_t i = 0; i < corners.size(); ++i )
     {
         path_vertex* corner = corners[ i ];
+        if ( ! corner->is_corner )
+            continue;
 
 
 #ifdef DEBUG_SWEEP
@@ -1081,11 +1190,6 @@ static void sweep_plane( path* path )
             printf( "START HOLE\n" );
 #endif
 
-            auto j = after;
-            auto i = after; --i;
- 
-            sweep_slice( path, &*i, &*j, corner );
-            
             is_hole = true;
         }
         else
@@ -1135,25 +1239,21 @@ static void sweep_plane( path* path )
         // Work out which edge is to the left.  If we get this wrong then
         // the topology of the figure breaks and we get corrupted slices or
         // encounter the bad case above.
-        float a = corner->e[ 0 ]->v[ 0 ]->p.x;
-        float b = corner->e[ 1 ]->v[ 1 ]->p.x;
-
-        if ( corner->e[ 0 ]->v[ 0 ] == corner->e[ 1 ]->v[ 1 ] )
+        float a, b;
+        
+        // Look at control point closest to corner.
+        switch ( corner->e[ 0 ]->kind )
         {
-            // Look at control point closest to corner.
-            switch ( corner->e[ 0 ]->kind )
-            {
-            case PATH_QUAD_TO:  a = corner->e[ 0 ]->c[ 0 ].x; break;
-            case PATH_CUBIC_TO: a = corner->e[ 0 ]->c[ 1 ].x; break;
-            default: break;
-            }
-            
-            switch ( corner->e[ 1 ]->kind )
-            {
-            case PATH_QUAD_TO:  b = corner->e[ 1 ]->c[ 0 ].x; break;
-            case PATH_CUBIC_TO: b = corner->e[ 1 ]->c[ 0 ].x; break;
-            default: break;
-            }
+        default:            a = corner->e[ 0 ]->v[ 0 ]->p.x;    break;
+        case PATH_QUAD_TO:  a = corner->e[ 0 ]->c[ 0 ].x;       break;
+        case PATH_CUBIC_TO: a = corner->e[ 0 ]->c[ 1 ].x;       break;
+        }
+        
+        switch ( corner->e[ 1 ]->kind )
+        {
+        default:            b = corner->e[ 1 ]->v[ 1 ]->p.x;    break;
+        case PATH_QUAD_TO:  b = corner->e[ 1 ]->c[ 0 ].x;       break;
+        case PATH_CUBIC_TO: b = corner->e[ 1 ]->c[ 0 ].x;       break;
         }
 
         if ( a > b )
@@ -1166,6 +1266,35 @@ static void sweep_plane( path* path )
             right.left = true;
         else
             left.left = true;
+
+
+        if ( is_hole )
+        {
+            // Check for non-zero winding.  It only actually creates a hole
+            // if the winding is opposite to the winding of the figure it's
+            // contained in.
+            auto before = after; --before;
+        
+            assert( before->reversed != after->reversed );
+            assert( left.reversed != right.reversed );
+            
+            if ( before->reversed == left.reversed )
+            {
+                // Snip this entire loop from the figure, as it may well have
+                // been caused by a self-intersection.
+                path_vertex* v = corner;
+                do
+                {
+                    v->is_corner = false;
+                    v = v->e[ 1 ]->v[ 1 ];
+                }
+                while ( v != corner );
+                continue;
+            }
+        
+            // End slice above the hole.
+            sweep_slice( path, &*before, &*after, corner );
+        }
         
         edges.insert( after, left );
         edges.insert( after, right );
@@ -1622,11 +1751,12 @@ font_glyph font_slicer::glyph_info_for_char( char32_t c )
     path path;
     outline_to_path( &path, p->face->bbox, &p->face->glyph->outline );
     build_polygon( &path );
+    self_intersect( &path );
     find_corners( &path );
     sweep_plane( &path );
 
     // Debug.
-//    write_svg( &path, stringf( "c%02X.svg", (int)c ).c_str() );
+    write_svg( &path, stringf( "c%02X.svg", (int)c ).c_str() );
     
 
     approx( &path );

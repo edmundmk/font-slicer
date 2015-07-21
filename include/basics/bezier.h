@@ -10,6 +10,7 @@
 #define BEZIER_H
 
 
+#include <utility>
 #include <math3.h>
 
 
@@ -24,13 +25,13 @@ struct lbezier
     lbezier( float2 p0, float2 p1 );
     
     
-    float2  evaluate( float t );
-    void    split( float t, lbezier out_c[ 2 ] );
-    float2  derivative();
-    bool    is_monotonic_x();
-    bool    is_monotonic_y();
-    size_t  solve_x( float x, float* out_t );
-    size_t  solve_y( float y, float* out_t );
+    float2  evaluate( float t ) const;
+    void    split( float t, lbezier out_c[ 2 ] ) const;
+    float2  derivative() const;
+    bool    is_monotonic_x() const;
+    bool    is_monotonic_y() const;
+    size_t  solve_x( float x, float* out_t ) const;
+    size_t  solve_y( float y, float* out_t ) const;
     
     
     float2 p[ 2 ];
@@ -45,16 +46,17 @@ struct lbezier
 struct qbezier
 {
     qbezier();
+    qbezier( const lbezier& l );
     qbezier( float2 p0, float2 p1, float2 p2 );
 
 
-    float2  evaluate( float t );
-    void    split( float t, qbezier out_c[ 2 ] );
-    lbezier derivative();
-    bool    is_monotonic_x();
-    bool    is_monotonic_y();
-    size_t  solve_x( float x, float out_t[ 2 ] );
-    size_t  solve_y( float y, float out_t[ 2 ] );
+    float2  evaluate( float t ) const;
+    void    split( float t, qbezier out_c[ 2 ] ) const;
+    lbezier derivative() const;
+    bool    is_monotonic_x() const;
+    bool    is_monotonic_y() const;
+    size_t  solve_x( float x, float out_t[ 2 ] ) const;
+    size_t  solve_y( float y, float out_t[ 2 ] ) const;
     
 
     float2 p[ 3 ];
@@ -69,24 +71,31 @@ struct qbezier
 struct cbezier
 {
     cbezier();
+    cbezier( const lbezier& l );
+    cbezier( const qbezier& q );
     cbezier( float2 p0, float2 p1, float2 p2, float2 p3 );
 
 
-    float2  evaluate( float t );
-    void    split( float t, cbezier out_c[ 2 ] );
-    qbezier derivative();
-    bool    is_monotonic_x();
-    bool    is_monotonic_y();
-    size_t  solve_x( float x, float out_t[ 3 ] );
-    size_t  solve_y( float y, float out_t[ 3 ] );
-    bool    solve_self_intersection( float out_t[ 2 ] );
+    float2  evaluate( float t ) const;
+    void    split( float t, cbezier out_c[ 2 ] ) const;
+    qbezier derivative() const;
+    bool    is_monotonic_x() const;
+    bool    is_monotonic_y() const;
+    size_t  solve_x( float x, float out_t[ 3 ] ) const;
+    size_t  solve_y( float y, float out_t[ 3 ] ) const;
+    bool    solve_self_intersection( float out_t[ 2 ] ) const;
     
 
     float2 p[ 4 ];
 
 };
 
-
+size_t solve_intersection
+(
+    const cbezier& a,
+    const cbezier& b,
+    std::pair< float, float > out_t[ 9 ]
+);
 
 
 

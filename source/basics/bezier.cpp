@@ -7,6 +7,7 @@
 
 
 #include "bezier.h"
+#include "rect.h"
 
 
 
@@ -21,34 +22,34 @@ lbezier::lbezier( float2 p0, float2 p1 )
 }
 
     
-float2 lbezier::evaluate( float t )
+float2 lbezier::evaluate( float t ) const
 {
     return lerp( p[ 0 ], p[ 1 ], t );
 }
 
-void lbezier::split( float t, lbezier out_c[ 2 ] )
+void lbezier::split( float t, lbezier out_c[ 2 ] ) const
 {
     float2 q = lerp( p[ 0 ], p[ 1 ], t );
     out_c[ 0 ] = lbezier( p[ 0 ], q );
     out_c[ 1 ] = lbezier( q, p[ 1 ] );
 }
 
-float2 lbezier::derivative()
+float2 lbezier::derivative() const
 {
     return p[ 1 ] - p[ 0 ];
 }
 
-bool lbezier::is_monotonic_x()
+bool lbezier::is_monotonic_x() const
 {
     return true;
 }
 
-bool lbezier::is_monotonic_y()
+bool lbezier::is_monotonic_y() const
 {
     return true;
 }
 
-size_t lbezier::solve_x( float x, float* out_t )
+size_t lbezier::solve_x( float x, float* out_t ) const
 {
     /*
             x = (1-t)p0 + t p1
@@ -71,7 +72,7 @@ size_t lbezier::solve_x( float x, float* out_t )
     return 0;
 }
 
-size_t lbezier::solve_y( float y, float* out_t )
+size_t lbezier::solve_y( float y, float* out_t ) const
 {
     float q = p[ 1 ].y - p[ 0 ].y;
     if ( q != 0 )
@@ -93,6 +94,13 @@ qbezier::qbezier()
 {
 }
 
+qbezier::qbezier( const lbezier& l )
+{
+    p[ 0 ] = l.p[ 0 ];
+    p[ 1 ] = lerp( l.p[ 0 ], l.p[ 1 ], 0.5f );
+    p[ 2 ] = l.p[ 1 ];
+}
+
 qbezier::qbezier( float2 p0, float2 p1, float2 p2 )
 {
     p[ 0 ] = p0;
@@ -100,14 +108,14 @@ qbezier::qbezier( float2 p0, float2 p1, float2 p2 )
     p[ 2 ] = p2;
 }
 
-float2 qbezier::evaluate( float t )
+float2 qbezier::evaluate( float t ) const
 {
     float2 q01 = lerp( p[ 0 ], p[ 1 ], t );
     float2 q12 = lerp( p[ 1 ], p[ 2 ], t );
     return lerp( q01, q12, t );
 }
 
-void qbezier::split( float t, qbezier out_c[ 2 ] )
+void qbezier::split( float t, qbezier out_c[ 2 ] ) const
 {
     float2 q01 = lerp( p[ 0 ], p[ 1 ], t );
     float2 q12 = lerp( p[ 1 ], p[ 2 ], t );
@@ -116,7 +124,7 @@ void qbezier::split( float t, qbezier out_c[ 2 ] )
     out_c[ 1 ] = qbezier( q, q12, p[ 1 ] );
 }
 
-lbezier qbezier::derivative()
+lbezier qbezier::derivative() const
 {
     return lbezier
     (
@@ -125,19 +133,19 @@ lbezier qbezier::derivative()
     );
 }
 
-bool qbezier::is_monotonic_x()
+bool qbezier::is_monotonic_x() const
 {
     // TODO.
     return false;
 }
 
-bool qbezier::is_monotonic_y()
+bool qbezier::is_monotonic_y() const
 {
     // TODO.
     return false;
 }
 
-size_t qbezier::solve_x( float x, float out_t[ 2 ] )
+size_t qbezier::solve_x( float x, float out_t[ 2 ] ) const
 {
     static const float EPSILON = 1.0e-4f;
 
@@ -190,7 +198,7 @@ size_t qbezier::solve_x( float x, float out_t[ 2 ] )
     return 0;
 }
 
-size_t qbezier::solve_y( float y, float out_t[ 2 ] )
+size_t qbezier::solve_y( float y, float out_t[ 2 ] ) const
 {
     static const float EPSILON = 1.0e-4f;
 
@@ -240,6 +248,22 @@ cbezier::cbezier()
 {
 }
 
+cbezier::cbezier( const lbezier& l )
+{
+    p[ 0 ] = l.p[ 0 ];
+    p[ 1 ] = lerp( l.p[ 0 ], l.p[ 1 ], 1.0f / 3.0f );
+    p[ 2 ] = lerp( l.p[ 0 ], l.p[ 1 ], 2.0f / 3.0f );
+    p[ 3 ] = l.p[ 1 ];
+}
+
+cbezier::cbezier( const qbezier& c )
+{
+    p[ 0 ] = c.p[ 0 ];
+    p[ 1 ] = c.p[ 0 ] + ( 2.0f / 3.0f ) * ( c.p[ 1 ] - c.p[ 0 ] );
+    p[ 2 ] = c.p[ 2 ] + ( 2.0f / 3.0f ) * ( c.p[ 1 ] - c.p[ 2 ] );
+    p[ 3 ] = c.p[ 2 ];
+}
+
 cbezier::cbezier( float2 p0, float2 p1, float2 p2, float2 p3 )
 {
     p[ 0 ] = p0;
@@ -248,7 +272,7 @@ cbezier::cbezier( float2 p0, float2 p1, float2 p2, float2 p3 )
     p[ 3 ] = p3;
 }
 
-float2 cbezier::evaluate( float t )
+float2 cbezier::evaluate( float t ) const
 {
     float2 q01 = lerp( p[ 0 ], p[ 1 ], t );
     float2 q12 = lerp( p[ 1 ], p[ 2 ], t );
@@ -258,7 +282,7 @@ float2 cbezier::evaluate( float t )
     return lerp( q012, q123, t );
 }
 
-void cbezier::split( float t, cbezier out_c[ 2 ] )
+void cbezier::split( float t, cbezier out_c[ 2 ] ) const
 {
     float2 q01 = lerp( p[ 0 ], p[ 1 ], t );
     float2 q12 = lerp( p[ 1 ], p[ 2 ], t );
@@ -270,7 +294,7 @@ void cbezier::split( float t, cbezier out_c[ 2 ] )
     out_c[ 1 ] = cbezier( q, q123, q23, p[ 3 ] );
 }
 
-qbezier cbezier::derivative()
+qbezier cbezier::derivative() const
 {
     return qbezier
     (
@@ -323,14 +347,14 @@ static bool is_monotonic( float f, float g )
     return false;
 }
 
-bool cbezier::is_monotonic_x()
+bool cbezier::is_monotonic_x() const
 {
     float f = ( p[ 1 ].x - p[ 0 ].x ) / ( p[ 3 ].x - p[ 0 ].x );
     float g = ( p[ 3 ].x - p[ 2 ].x ) / ( p[ 3 ].x - p[ 0 ].x );
     return is_monotonic( f, g );
 }
 
-bool cbezier::is_monotonic_y()
+bool cbezier::is_monotonic_y() const
 {
     float f = ( p[ 1 ].y - p[ 0 ].y ) / ( p[ 3 ].y - p[ 0 ].y );
     float g = ( p[ 3 ].y - p[ 2 ].y ) / ( p[ 3 ].y - p[ 0 ].y );
@@ -447,7 +471,7 @@ static size_t solve( float f, float g, float v, float out_t[ 3 ] )
 }
 
 
-size_t cbezier::solve_x( float x, float out_t[ 3 ] )
+size_t cbezier::solve_x( float x, float out_t[ 3 ] ) const
 {
     float f = ( p[ 1 ].x - p[ 0 ].x ) / ( p[ 3 ].x - p[ 0 ].x );
     float g = ( p[ 3 ].x - p[ 2 ].x ) / ( p[ 3 ].x - p[ 0 ].x );
@@ -455,7 +479,7 @@ size_t cbezier::solve_x( float x, float out_t[ 3 ] )
     return solve( f, g, v, out_t );
 }
 
-size_t cbezier::solve_y( float y, float out_t[ 3 ] )
+size_t cbezier::solve_y( float y, float out_t[ 3 ] ) const
 {
     float f = ( p[ 1 ].y - p[ 0 ].y ) / ( p[ 3 ].y - p[ 0 ].y );
     float g = ( p[ 3 ].y - p[ 2 ].y ) / ( p[ 3 ].y - p[ 0 ].y );
@@ -463,7 +487,7 @@ size_t cbezier::solve_y( float y, float out_t[ 3 ] )
     return solve( f, g, v, out_t );
 }
 
-bool cbezier::solve_self_intersection( float out_t[ 2 ] )
+bool cbezier::solve_self_intersection( float out_t[ 2 ] ) const
 {
     qbezier h = derivative();
 
@@ -498,6 +522,185 @@ bool cbezier::solve_self_intersection( float out_t[ 2 ] )
     out_t[ 1 ] = u + v;
     return true;
 }
+
+
+
+/*
+    From Graphics Gems 4.  Intersecting Parametric Cubic Curves by Midpoint
+    Subdivision, R. Viktor Klassen.
+*/
+
+
+static const float INV_EPS = (float)( 1 << 14 );
+inline float log4f( float x ) { return 0.5f * log2f( x ); }
+
+
+static rect calculate_bbox( const cbezier& c )
+{
+    rect bbox;
+    for ( size_t i = 0; i < 4; ++i )
+        bbox = bbox.expand( c.p[ i ] );
+    return bbox;
+}
+
+
+static bool intersect_bbox( const cbezier& a, const cbezier& b )
+{
+    rect a_bbox = calculate_bbox( a );
+    rect b_bbox = calculate_bbox( b );
+    if (    a_bbox.maxx < b_bbox.minx
+         || a_bbox.maxy < b_bbox.miny
+         || a_bbox.minx > b_bbox.maxx
+         || a_bbox.miny > b_bbox.maxy )
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
+
+static int estimate_subdivision_depth( const cbezier& c )
+{
+    float2 l1 = abs( ( c.p[ 2 ] - c.p[ 1 ] ) - ( c.p[ 1 ] - c.p[ 0 ] ) );
+    float2 l2 = abs( ( c.p[ 3 ] - c.p[ 2 ] ) - ( c.p[ 2 ] - c.p[ 1 ] ) );
+    float2 l = max( l1, l2 );
+    float l0 = max( l.x, l.y );
+    if ( l0 * 0.75f * F_SQRT2 + 1.0f != 1.0f )
+        return (int)ceilf( log4f( F_SQRT2 * 6.0f / 8.0f * INV_EPS * 10.0f ) );
+    else
+        return 0;
+}
+
+
+static void recursively_intersect
+(
+    const cbezier& a,
+    float t0,
+    float t1,
+    int deptha,
+    const cbezier& b,
+    float u0,
+    float u1,
+    int depthb,
+    std::pair< float, float > out_t[ 9 ],
+    size_t& index
+)
+{
+    if ( deptha > 0 )
+    {
+        cbezier A[ 2 ];
+        a.split( 0.5f, A );
+        float tmid = ( t0 + t1 ) * 0.5f;
+        deptha -= 1;
+
+        if ( depthb > 0 )
+        {
+            cbezier B[ 2 ];
+            b.split( 0.5f, B );
+            float umid = ( u0 + u1 ) * 0.5f;
+            depthb -= 1;
+            
+            if ( intersect_bbox( A[ 0 ], B[ 0 ] ) )
+                recursively_intersect( A[ 0 ], t0, tmid, deptha,
+                                       B[ 0 ], u0, umid, depthb,
+                                       out_t, index );
+            
+            if ( intersect_bbox( A[ 0 ], B[ 1 ] ) )
+                recursively_intersect( A[ 0 ], t0, tmid, deptha,
+                                       B[ 1 ], umid, u1, depthb,
+                                       out_t, index );
+
+            if ( intersect_bbox( A[ 1 ], B[ 0 ] ) )
+                recursively_intersect( A[ 1 ], tmid, t1, deptha,
+                                       B[ 0 ], u0, umid, depthb,
+                                       out_t, index );
+
+            if ( intersect_bbox( A[ 1 ], B[ 1 ] ) )
+                recursively_intersect( A[ 1 ], tmid, t1, deptha,
+                                       B[ 1 ], umid, u1, depthb,
+                                       out_t, index );
+        }
+        else
+        {
+            if ( intersect_bbox( A[ 0 ], b ) )
+                recursively_intersect( A[ 0 ], t0, tmid, deptha,
+                                       b, u0, u1, depthb,
+                                       out_t, index );
+
+            if ( intersect_bbox( A[ 1 ], b ) )
+                recursively_intersect( A[ 1 ], tmid, t1, deptha,
+                                       b, u0, u1, depthb,
+                                       out_t, index );
+        }
+    }
+    else
+    {
+        if ( depthb > 0 )
+        {
+            cbezier B[ 2 ];
+            b.split( 0.5f, B );
+            float umid = ( u0 + u1 ) * 0.5f;
+            depthb -= 1;
+
+            if ( intersect_bbox( a, B[ 0 ] ) )
+                recursively_intersect( a, t0, t1, deptha,
+                                       B[ 0 ], u0, umid, depthb,
+                                       out_t, index );
+
+            if ( intersect_bbox( a, B[ 1 ] ) )
+                recursively_intersect( a, t0, t1, deptha,
+                                       B[ 1 ], umid, u1, depthb,
+                                       out_t, index );
+        }
+        else
+        {
+            // Both segments are fully subdivided, do line segments.
+            float2 lk = a.p[ 3 ] - a.p[ 0 ];
+            float2 nm = b.p[ 3 ] - b.p[ 0 ];
+            float2 mk = b.p[ 0 ] - a.p[ 0 ];
+            float det = nm.x * lk.y - nm.y * lk.x;
+            if ( 1.0f + det == 1.0f )
+                return;
+        
+            float detinv = 1.0f / det;
+            float s = ( nm.x * mk.y - nm.y * mk.x ) * detinv;
+            float t = ( lk.x * mk.y - lk.y * mk.x ) * detinv;
+            if ( s < 0.0f || s > 1.0f || t < 0.0f || t > 1.0f )
+                return;
+            
+            assert( index < 9 );
+            out_t[ index ] = std::make_pair
+            (
+                lerp( t0, t1, s ),
+                lerp( u0, u1, t )
+            );
+            index += 1;
+        }
+    }
+}
+
+
+size_t solve_intersection
+(
+    const cbezier& a,
+    const cbezier& b,
+    std::pair< float, float > out_t[ 9 ]
+)
+{
+    size_t index = 0;
+    if ( intersect_bbox( a, b ) )
+    {
+        int ra = estimate_subdivision_depth( a );
+        int rb = estimate_subdivision_depth( b );
+        recursively_intersect( a, 0.0f, 1.0f, ra, b, 0.0f, 1.0f, rb, out_t, index );
+    }
+    return index;
+}
+
+
 
 
 

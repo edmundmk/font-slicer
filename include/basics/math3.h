@@ -25,6 +25,7 @@ static const float F_INFINITY   = std::numeric_limits< float >::infinity();
 static const float F_NAN        = std::numeric_limits< float >::quiet_NaN();
 static const float F_TAU        = 6.283185307179586f;
 static const float F_PI         = F_TAU * 0.5f;
+static const float F_SQRT2      = sqrtf( 2.0f );
 
 
 struct float2
@@ -186,6 +187,9 @@ inline float2& operator *= ( float2& a, float b ) { return a = a * b; }
 inline float2& operator /= ( float2& a, float2 b ) { return a = a / b; }
 inline float2& operator /= ( float2& a, float b ) { return a = a / b; }
 
+inline float2 min( float2 a, float2 b ) { return float2( min( a.x, b.x ), min( a.y, b.y ) ); }
+inline float2 max( float2 a, float2 b ) { return float2( max( a.x, b.x ), max( a.y, b.y ) ); }
+inline float2 abs( float2 v ) { return float2( fabsf( v.x ), fabsf( v.y ) ); }
 inline float2 lerp( float2 a, float2 b, float t ) { return float2( lerp( a.x, b.x, t ), lerp( a.y, b.y, t ) ); }
 inline float dot( float2 a, float2 b ) { return a.x * b.x + a.y * b.y; }
 inline float lengthsq( float2 v ) { return dot( v, v ); }
