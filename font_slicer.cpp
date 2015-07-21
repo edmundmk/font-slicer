@@ -19,6 +19,9 @@
 #include FT_OUTLINE_H
 
 
+static const float EPSILON = 0.01f;
+
+
 //#define DEBUG_SWEEP
 
 
@@ -348,11 +351,6 @@ static bool split_edge( path* path, path_edge* e, float t )
 {
     // Split single edge.
 
-    static const float EPSILON = 0.005f;
-
-    if ( t < EPSILON || t > 1 - EPSILON )
-        return false;
-    
     switch ( e->kind )
     {
     case PATH_LINE_TO:
@@ -360,6 +358,12 @@ static bool split_edge( path* path, path_edge* e, float t )
         lbezier l( e->v[ 0 ]->p, e->v[ 1 ]->p );
         lbezier split[ 2 ];
         l.split( t, split );
+        
+        float2 s = split[ 0 ].p[ 1 ];
+        if ( lengthsq( s - l.p[ 0 ] ) < EPSILON * EPSILON )
+            return false;
+        if ( lengthsq( s - l.p[ 1 ] ) < EPSILON * EPSILON )
+            return false;
 
         auto v = std::make_unique< path_vertex >();
         auto f = std::make_unique< path_edge >();
@@ -392,6 +396,12 @@ static bool split_edge( path* path, path_edge* e, float t )
         qbezier split[ 2 ];
         q.split( t, split );
         
+        float2 s = split[ 0 ].p[ 2 ];
+        if ( lengthsq( s - q.p[ 0 ] ) < EPSILON * EPSILON )
+            return false;
+        if ( lengthsq( s - q.p[ 2 ] ) < EPSILON * EPSILON )
+            return false;
+        
         auto v = std::make_unique< path_vertex >();
         auto f = std::make_unique< path_edge >();
         
@@ -422,6 +432,12 @@ static bool split_edge( path* path, path_edge* e, float t )
         cbezier c( e->v[ 0 ]->p, e->c[ 0 ], e->c[ 1 ], e->v[ 1 ]->p );
         cbezier split[ 2 ];
         c.split( t, split );
+
+        float2 s = split[ 0 ].p[ 3 ];
+        if ( lengthsq( s - c.p[ 0 ] ) < EPSILON * EPSILON )
+            return false;
+        if ( lengthsq( s - c.p[ 3 ] ) < EPSILON * EPSILON )
+            return false;
         
         auto v = std::make_unique< path_vertex >();
         auto f = std::make_unique< path_edge >();
@@ -645,14 +661,27 @@ static bool intersect( path* path, path_edge* a, path_edge* b )
     cbezier a_bezier = edge_to_bezier( a );
     cbezier b_bezier = edge_to_bezier( b );
     std::pair< float, float > t[ 9 ];
-    if ( solve_intersection( a_bezier, b_bezier, t ) == 0 )
-        return false;
+    size_t count = solve_intersection( a_bezier, b_bezier, t );
     
-    // Split at the intersection.
-    if (    ! split_edge( path, a, t[ 0 ].first )
-         || ! split_edge( path, b, t[ 0 ].second ) )
-        return false;
+    bool split_a = false;
+    bool split_b = false;
+    for ( size_t i = 0; i < count; ++i )
+    {
+        // Ignore cases where curves share a vertex.
+        if ( t[ i ].first == 1.0f && t[ i ].second == 0.0f )
+            continue;
+
+        // Attempt split at the intersection.
+        split_a = split_edge( path, a, t[ i ].first );
+        split_b = split_edge( path, b, t[ i ].second );
+        if ( split_a || split_b )
+            break;
+    }
     
+    if ( ! split_a && ! split_b )
+        return false;
+        
+        
     /*
                     a
                     v
@@ -664,9 +693,41 @@ static bool intersect( path* path, path_edge* a, path_edge* b )
                   a_next
     */
     
-    // a is before b in the outline.
-    path_edge* a_next = a->v[ 1 ]->e[ 1 ];
-    path_edge* b_next = b->v[ 1 ]->e[ 1 ];
+    path_edge* a_next;
+    path_edge* b_next;
+    if ( split_a && split_b )
+    {
+        // a is before b in the outline.
+        a_next = a->v[ 1 ]->e[ 1 ];
+        b_next = b->v[ 1 ]->e[ 1 ];
+    }
+    else if ( split_a )
+    {
+        a_next = a->v[ 1 ]->e[ 1 ];
+        if ( t[ 0 ].second > 0.5f )
+        {
+            b_next = b->v[ 1 ]->e[ 1 ];
+        }
+        else
+        {
+            b_next = b;
+            b = b_next->v[ 0 ]->e[ 0 ];
+        }
+    }
+    else if ( split_b )
+    {
+        b_next = b->v[ 1 ]->e[ 1 ];
+        if ( t[ 0 ].first > 0.5f )
+        {
+            a_next = a->v[ 1 ]->e[ 1 ];
+        }
+        else
+        {
+            a_next = a;
+            a = a_next->v[ 0 ]->e[ 0 ];
+        }
+    }
+
     path_vertex* outer = a->v[ 1 ];
     path_vertex* inner = b->v[ 1 ];
 
@@ -683,7 +744,7 @@ static bool intersect( path* path, path_edge* a, path_edge* b )
     
     inner->is_corner = true;
     outer->is_corner = true;
-    
+
     return true;
 }
 
@@ -1421,13 +1482,12 @@ static bool approx_slice(
      
     */
     
-    static const float EPSILON = 0.01f;
-    
     float sdet = c.x * -tb.y - -tb.x * c.y;
     float tdet = ta.x * c.y - c.x * ta.y;
     float det = ta.x * -tb.y - -tb.x * ta.y;
     
-    if ( ( fabsf( sdet ) < EPSILON && fabsf( tdet ) < EPSILON ) || fabsf( det ) < EPSILON )
+    if ( ( fabsf( sdet ) < EPSILON && fabsf( tdet ) < EPSILON )
+            || fabsf( det ) < EPSILON )
     {
         // Probably linear.    
         *out = qbezier
@@ -1745,7 +1805,7 @@ font_glyph font_slicer::glyph_info_for_char( char32_t c )
     FT_Load_Char( p->face, c, FT_LOAD_NO_SCALE );
     
     // Make it bolder.
-//    FT_Outline_Embolden( &p->face->glyph->outline, 1 * ( 1 << 6 ) );
+//    FT_Outline_Embolden( &p->face->glyph->outline, 4 * ( 1 << 6 ) / 2 );
 
     // Process path.
     path path;
@@ -1756,7 +1816,7 @@ font_glyph font_slicer::glyph_info_for_char( char32_t c )
     sweep_plane( &path );
 
     // Debug.
-    write_svg( &path, stringf( "c%02X.svg", (int)c ).c_str() );
+//    write_svg( &path, stringf( "c%02X.svg", (int)c ).c_str() );
     
 
     approx( &path );
