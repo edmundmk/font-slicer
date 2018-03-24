@@ -30,5 +30,3 @@ an alternative to texture atlases,
 
 To compile, you will need to link to [FreeType](http://freetype.org).
 
-_Edmund Kapusniak_
-
