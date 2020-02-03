@@ -714,8 +714,9 @@ static bool intersect( path* path, path_edge* a, path_edge* b )
             b = b_next->v[ 0 ]->e[ 0 ];
         }
     }
-    else if ( split_b )
+    else
     {
+        assert( split_b );
         b_next = b->v[ 1 ]->e[ 1 ];
         if ( t[ 0 ].first > 0.5f )
         {

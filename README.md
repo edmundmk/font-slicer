@@ -1,7 +1,24 @@
-font-slicer
-===========
+# font-slicer
 
 font-slicer renders freely scalable font glyphs using the GPU.
+
+It works by decomposing glyph outlines into monotone trapezoids, and
+calculating the coverage for each trapezoid with a pixel shader.  The files
+`font_slicer.h` and `font_slicer.cpp` contain the core code which decomposes
+glyph outlines.
+
+
+## Usage
+
+The example program runs on OSX.  An Xcode project is provided.  To compile,
+you will need to link to [FreeType](http://freetype.org).
+
+To run the program provide a font file as an argument:
+
+    font-slicer myfont.ttf
+
+
+## Algorithm
 
 It takes an approach similar to CPU rasterisation, by 'slicing' each glyph's
 outline into y-monotone pieces.  Each slice is trapezoidal - it has a
@@ -18,15 +35,13 @@ it.  The curved edges of the slice are flattened to lines, to produce a true
 trapezoid, and the percentage coverage of the trapezoid on the square is
 output from the shader.
 
-OpenGL's built-in sRGB handling performs gamma correction on the text for
-display.
-
 The text rendered by font-slicer is freely scalable, but cannot be rotated.  I
-present it here as a potential solution for rasterising text on the GPU, as an
-an alternative to texture atlases,
-[SDFs](http://www.valvesoftware.com/publications/2007/SIGGRAPH2007_AlphaTestedMagnification.pdf),
-[glyphy](http://glyphy.org), or
-[Loop-Blinn](http://http.developer.nvidia.com/GPUGems3/gpugems3_ch25.html).
+present it here as a potential solution for rasterising text on the GPU.
 
-To compile, you will need to link to [FreeType](http://freetype.org).
+
+## License
+
+Copyright © 2014 Edmund Kapusniak. Licensed under the GNU General Public
+License, version 3. See the LICENSE file in the project root for full license
+information.
 

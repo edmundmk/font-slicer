@@ -39,17 +39,27 @@ static void oglGetShaderPrecisionFormat( GLenum shadertype, GLenum precisiontype
     case GL_MEDIUM_FLOAT:
     case GL_LOW_FLOAT:
         if ( range )
-            range[ 0 ] = 127, range[ 1 ] = 127;
+        {
+            range[ 0 ] = 127;
+            range[ 1 ] = 127;
+        }
         if ( precision )
+        {
             *precision = 23;
+        }
         break;
     case GL_HIGH_INT:
     case GL_MEDIUM_INT:
     case GL_LOW_INT:
         if ( range )
-            range[ 0 ] = 31, range[ 1 ] = 30;
+        {
+            range[ 0 ] = 31;
+            range[ 1 ] = 30;
+        }
         if ( precision )
+        {
             *precision = 0;
+        }
         break;
     }
 }

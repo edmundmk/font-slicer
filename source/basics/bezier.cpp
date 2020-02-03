@@ -191,7 +191,6 @@ size_t qbezier::solve_x( float x, float out_t[ 2 ] ) const
         if ( t1 >= 0 && t1 <= 1 )
         {
             out_t[ i ] = t1;
-            i += 1;
         }
     }
     
