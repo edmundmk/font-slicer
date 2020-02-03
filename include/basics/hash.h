@@ -2,7 +2,9 @@
 //  hash.h
 //
 //  Created by Edmund Kapusniak on 28/07/2013.
-//  Copyright (c) 2013 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2013 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -55,11 +57,11 @@ public:
     void        data( double f );
     void        data( const char* string );
     void        data( const void* data, size_t size );
-    
+
     hash32_t    hash32();
     hash64_t    hash64();
-    
-    
+
+
 private:
 
     SpookyHash* context;

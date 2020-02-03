@@ -2,7 +2,9 @@
 //  rect.h
 //
 //  Created by Edmund Kapusniak on 05/12/2014.
-//  Copyright (c) 2014 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2014 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -22,11 +24,11 @@ struct rect
 {
     rect();
     rect( float minx, float miny, float maxx, float maxy );
-    
+
     float   width() const;
     float   height() const;
     float2  centre() const;
-    
+
     bool    empty() const;
     bool    contains( float2 p ) const;
 
@@ -35,13 +37,13 @@ struct rect
 
     rect    expand( float2 p ) const;
     rect    expand( const rect& r ) const;
-    
-    
+
+
     float minx;
     float miny;
     float maxx;
     float maxy;
-    
+
 };
 
 
@@ -59,7 +61,7 @@ class quad
     quad( float2 q0, float2 q1, float2 q2, float2 q3 );
 
     float2 q[ 4 ];
-    
+
 };
 
 

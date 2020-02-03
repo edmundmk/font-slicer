@@ -2,7 +2,9 @@
 //  ogl_direct.cpp
 //
 //  Created by Edmund Kapusniak on 01/01/2015.
-//  Copyright (c) 2015 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2015 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -14,7 +16,7 @@
 /*
     Allow an unbounded number of vertices while submitting primitives in
     batches.  Requires remembering enough information to allow restart.
-    
+
     GL_POINTS           easy
     GL_LINE_STRIP       remember last vertex
     GL_LINE_LOOP        remember first and last vertex
@@ -46,11 +48,11 @@ ogl_direct::ogl_direct( ogl_context* ogl )
 {
     ogl->glGenVertexArrays( 1, &vao );
     ogl->glGenBuffers( 1, &vbo );
-    
+
     ogl->glBindBuffer( GL_ARRAY_BUFFER, vbo );
     ogl->glBufferData( GL_ARRAY_BUFFER,
                 sizeof( v ) * VERTEX_COUNT, nullptr, GL_STREAM_DRAW );
-    
+
     ogl->glBindVertexArray( vao );
     ogl->glEnableVertexAttribArray( 0 );
     ogl->glVertexAttribPointer( 0, 4, GL_FLOAT, GL_FALSE,
@@ -62,9 +64,9 @@ ogl_direct::ogl_direct( ogl_context* ogl )
     ogl->glVertexAttribPointer( 2, 4, GL_FLOAT, GL_FALSE,
                 sizeof( v ), (const GLvoid*)offsetof( v, texcoord ) );
     ogl->glBindVertexArray( 0 );
-    
+
     ogl->glBindBuffer( GL_ARRAY_BUFFER, 0 );
-    
+
 
 }
 
@@ -80,7 +82,7 @@ void ogl_direct::begin( GLenum pmode )
 {
     assert( mode == GL_NONE );
     assert( ogl->EXT_map_buffer_range );
-    
+
     // Begin drawing.
     mode = pmode;
     isfirst = ( mode == GL_LINE_LOOP || mode == GL_TRIANGLE_FAN );
@@ -97,7 +99,7 @@ void ogl_direct::begin( GLenum pmode )
                     sizeof( v ) * VERTEX_COUNT, nullptr, GL_STREAM_DRAW );
         offset = 0;
     }
-    
+
     // Map remaining section of buffer (we don't know how big this batch is).
 
     // GL_MAP_INVALIDATE_RANGE_BIT is pretty much mandatory if we want to avoid
@@ -112,7 +114,7 @@ void ogl_direct::begin( GLenum pmode )
     else if ( mode == GL_TRIANGLES )
         count = ( count / 3 ) * 3;
     assert( count >= MIN_VERTICES );
-    
+
     p = (v*)ogl->glMapBufferRange
     (
         GL_ARRAY_BUFFER,
@@ -131,7 +133,7 @@ void ogl_direct::submit()
 {
     assert( mode != GL_NONE );
     assert( index == count );
-    
+
     // Assume vao and buffer are still bound.
 
     // Flush edited part of buffer (now we know how much data was written).
@@ -147,12 +149,12 @@ void ogl_direct::submit()
     assert( index >= MIN_VERTICES );
     GLenum drawmode = ( mode == GL_LINE_LOOP ) ? GL_LINE_STRIP : mode;
     ogl->glDrawArrays( drawmode, (GLint)offset, (GLsizei)count );
-    
+
     // Orphan the buffer.
     ogl->glBufferData( GL_ARRAY_BUFFER,
                 sizeof( v ) * VERTEX_COUNT, nullptr, GL_STREAM_DRAW );
     offset = 0;
-    
+
     // Remap buffer.
     count = VERTEX_COUNT - offset;
     if ( mode == GL_LINES || mode == GL_TRIANGLE_STRIP )
@@ -172,7 +174,7 @@ void ogl_direct::submit()
             | GL_MAP_UNSYNCHRONIZED_BIT
     );
     index = 0;
-    
+
     // Restart primitive.
     switch ( mode )
     {
@@ -181,13 +183,13 @@ void ogl_direct::submit()
     case GL_TRIANGLES:
         // Batch should have been a whole number of primitives.
         break;
-        
+
     case GL_LINE_STRIP:
     case GL_LINE_LOOP:
         // Restart from previous vertex.
         p[ index++ ] = prev0;
         break;
-        
+
     case GL_TRIANGLE_STRIP:
         // Restart using previous two vertices.  The fact that the batch
         // contained an even number of vertices should mean that the resulting
@@ -195,14 +197,14 @@ void ogl_direct::submit()
         p[ index++ ] = prev1;
         p[ index++ ] = prev0;
         break;
-        
+
     case GL_TRIANGLE_FAN:
         // Restart with the first vertex, and the last vertex from the fan.
         p[ index++ ] = first;
         p[ index++ ] = prev0;
         break;
     }
-    
+
     assert( index <= count );
 }
 
@@ -210,13 +212,13 @@ void ogl_direct::end()
 {
     assert( mode != GL_NONE );
     assert( index <= count );
-    
+
     // Check if we've drawn any vertices at all.
     if ( index == 0 )
     {
         return;
     }
-    
+
     // If we're drawing a line loop then draw back to the first vertex.
     if ( mode == GL_LINE_LOOP )
     {
@@ -224,12 +226,12 @@ void ogl_direct::end()
         {
             submit();
         }
-        
+
         p[ index++ ] = first;
     }
-    
+
     // Assume vao and buffer are still bound.
-    
+
     // Flush edited part of buffer (now we know how much data was written).
     ogl->glFlushMappedBufferRange
     (
@@ -238,7 +240,7 @@ void ogl_direct::end()
         sizeof( v ) * index
     );
     ogl->glUnmapBuffer( GL_ARRAY_BUFFER );
-    
+
     // Draw.
     GLenum drawmode = ( mode == GL_LINE_LOOP ) ? GL_LINE_STRIP : mode;
     ogl->glDrawArrays( drawmode, (GLint)offset, (GLsizei)index );
@@ -246,16 +248,16 @@ void ogl_direct::end()
     // Unbind.
     ogl->glBindBuffer( GL_ARRAY_BUFFER, 0 );
     ogl->glBindVertexArray( 0 );
-    
+
     // Next buffer write should happen after this one.
     offset += index;
-    
+
     // Stop drawing.
     mode    = GL_NONE;
     p       = nullptr;
     index   = 0;
     count   = 0;
-    
+
 }
 
 

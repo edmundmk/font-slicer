@@ -2,7 +2,9 @@
 //  uic_widget.h
 //
 //  Created by Edmund Kapusniak on 27/11/2014.
-//  Copyright (c) 2014 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2014 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -38,7 +40,7 @@ protected:
 
     virtual void reparent( void* parent );
     virtual void layout( const rect& rect );
-    
+
 
 };
 

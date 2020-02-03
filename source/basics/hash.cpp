@@ -2,7 +2,6 @@
 //  hash.cpp
 //
 //  Created by Edmund Kapusniak on 28/07/2013.
-//  Copyright (c) 2013 Edmund Kapusniak. All rights reserved.
 //
 
 
@@ -16,7 +15,7 @@
 //   Feb  5 2012: adjusted definitions of uint* to be more portable
 //   Mar 30 2012: 3 bytes/cycle, not 4.  Alpha was 4 but wasn't thorough enough.
 //   August 5 2012: SpookyV2 (different results)
-// 
+//
 // Up to 3 bytes/cycle for long messages.  Reasonably fast for short messages.
 // All 1 or 2 bit deltas achieve avalanche within 1% bias per output bit.
 //
@@ -28,9 +27,9 @@
 //
 // Google's CityHash has similar specs to SpookyHash, and CityHash is faster
 // on new Intel boxes.  MD4 and MD5 also have similar specs, but they are orders
-// of magnitude slower.  CRCs are two or more times slower, but unlike 
-// SpookyHash, they have nice math for combining the CRCs of pieces to form 
-// the CRCs of wholes.  There are also cryptographic hashes, but those are even 
+// of magnitude slower.  CRCs are two or more times slower, but unlike
+// SpookyHash, they have nice math for combining the CRCs of pieces to form
+// the CRCs of wholes.  There are also cryptographic hashes, but those are even
 // slower than MD5.
 //
 
@@ -96,7 +95,7 @@ public:
     void Init(
         uint64 seed1,       // any 64-bit value will do, including 0
         uint64 seed2);      // different seeds produce independent hashes
-    
+
     //
     // Update: add a piece of a message to a SpookyHash state
     //
@@ -139,7 +138,7 @@ public:
     // I tried 3 pairs of each; they all differed by at least 212 bits.
     //
     static INLINE void Mix(
-        const uint64 *data, 
+        const uint64 *data,
         uint64 &s0, uint64 &s1, uint64 &s2, uint64 &s3,
         uint64 &s4, uint64 &s5, uint64 &s6, uint64 &s7,
         uint64 &s8, uint64 &s9, uint64 &s10,uint64 &s11)
@@ -176,7 +175,7 @@ public:
     //
     static INLINE void EndPartial(
         uint64 &h0, uint64 &h1, uint64 &h2, uint64 &h3,
-        uint64 &h4, uint64 &h5, uint64 &h6, uint64 &h7, 
+        uint64 &h4, uint64 &h5, uint64 &h6, uint64 &h7,
         uint64 &h8, uint64 &h9, uint64 &h10,uint64 &h11)
     {
         h11+= h1;    h2 ^= h11;   h1 = Rot64(h1,44);
@@ -194,9 +193,9 @@ public:
     }
 
     static INLINE void End(
-        const uint64 *data, 
+        const uint64 *data,
         uint64 &h0, uint64 &h1, uint64 &h2, uint64 &h3,
-        uint64 &h4, uint64 &h5, uint64 &h6, uint64 &h7, 
+        uint64 &h4, uint64 &h5, uint64 &h6, uint64 &h7,
         uint64 &h8, uint64 &h9, uint64 &h10,uint64 &h11)
     {
         h0 += data[0];   h1 += data[1];   h2 += data[2];   h3 += data[3];
@@ -208,7 +207,7 @@ public:
     }
 
     //
-    // The goal is for each bit of the input to expand into 128 bits of 
+    // The goal is for each bit of the input to expand into 128 bits of
     //   apparent entropy before it is fully overwritten.
     // n trials both set and cleared at least m bits of h0 h1 h2 h3
     //   n: 2   m: 29
@@ -264,7 +263,7 @@ public:
         h0 ^= h3;  h3 = Rot64(h3,25);  h0 += h3;
         h1 ^= h0;  h0 = Rot64(h0,63);  h1 += h0;
     }
-    
+
 private:
 
     //
@@ -272,7 +271,7 @@ private:
     // Short has a low startup cost, the normal mode is good for long
     // keys, the cost crossover is at about 192 bytes.  The two modes were
     // held to the same quality bar.
-    // 
+    //
     static void Short(
         const void *message,  // message (array of bytes, not necessarily aligned)
         size_t length,        // length of message (in bytes)
@@ -325,7 +324,7 @@ private:
 #endif
 
 //
-// short hash ... it could be used on any message, 
+// short hash ... it could be used on any message,
 // but it's used by Spooky just for short messages.
 //
 void SpookyHash::Short(
@@ -335,16 +334,16 @@ void SpookyHash::Short(
     uint64 *hash2)
 {
     uint64 buf[2*sc_numVars];
-    union 
-    { 
-        const uint8 *p8; 
+    union
+    {
+        const uint8 *p8;
         uint32 *p32;
-        uint64 *p64; 
-        size_t i; 
+        uint64 *p64;
+        size_t i;
     } u;
 
     u.p8 = (const uint8 *)message;
-    
+
     if (!ALLOW_UNALIGNED_READS && (u.i & 0x7))
     {
         memcpy(buf, message, length);
@@ -360,7 +359,7 @@ void SpookyHash::Short(
     if (length > 15)
     {
         const uint64 *end = u.p64 + (length/32)*4;
-        
+
         // handle all complete sets of 32 bytes
         for (; u.p64 < end; u.p64 += 4)
         {
@@ -370,7 +369,7 @@ void SpookyHash::Short(
             a += u.p64[2];
             b += u.p64[3];
         }
-        
+
         //Handle the case of 16+ remaining bytes.
         if (remainder >= 16)
         {
@@ -381,7 +380,7 @@ void SpookyHash::Short(
             remainder -= 16;
         }
     }
-    
+
     // Handle the last 0..15 bytes, and its length
     d += ((uint64)length) << 56;
     switch (remainder)
@@ -435,9 +434,9 @@ void SpookyHash::Short(
 
 // do the whole hash in one call
 void SpookyHash::Hash128(
-    const void *message, 
-    size_t length, 
-    uint64 *hash1, 
+    const void *message,
+    size_t length,
+    uint64 *hash1,
     uint64 *hash2)
 {
     if (length < sc_bufSize)
@@ -449,18 +448,18 @@ void SpookyHash::Hash128(
     uint64 h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11;
     uint64 buf[sc_numVars];
     uint64 *end;
-    union 
-    { 
-        const uint8 *p8; 
-        uint64 *p64; 
-        size_t i; 
+    union
+    {
+        const uint8 *p8;
+        uint64 *p64;
+        size_t i;
     } u;
     size_t remainder;
-    
+
     h0=h3=h6=h9  = *hash1;
     h1=h4=h7=h10 = *hash2;
     h2=h5=h8=h11 = sc_const;
-    
+
     u.p8 = (const uint8 *)message;
     end = u.p64 + (length/sc_blockSize)*sc_numVars;
 
@@ -468,7 +467,7 @@ void SpookyHash::Hash128(
     if (ALLOW_UNALIGNED_READS || ((u.i & 0x7) == 0))
     {
         while (u.p64 < end)
-        { 
+        {
             Mix(u.p64, h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11);
 	    u.p64 += sc_numVars;
         }
@@ -488,8 +487,8 @@ void SpookyHash::Hash128(
     memcpy(buf, end, remainder);
     memset(((uint8 *)buf)+remainder, 0, sc_blockSize-remainder);
     ((uint8 *)buf)[sc_blockSize-1] = remainder;
-    
-    // do some final mixing 
+
+    // do some final mixing
     End(buf, h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11);
     *hash1 = h0;
     *hash2 = h1;
@@ -513,14 +512,14 @@ void SpookyHash::Update(const void *message, size_t length)
     uint64 h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11;
     size_t newLength = length + m_remainder;
     uint8  remainder;
-    union 
-    { 
-        const uint8 *p8; 
-        uint64 *p64; 
-        size_t i; 
+    union
+    {
+        const uint8 *p8;
+        uint64 *p64;
+        size_t i;
     } u;
     const uint64 *end;
-    
+
     // Is this message fragment too short?  If it is, stuff it away.
     if (newLength < sc_bufSize)
     {
@@ -529,7 +528,7 @@ void SpookyHash::Update(const void *message, size_t length)
         m_remainder = (uint8)newLength;
         return;
     }
-    
+
     // init the variables
     if (m_length < sc_bufSize)
     {
@@ -553,7 +552,7 @@ void SpookyHash::Update(const void *message, size_t length)
         h11 = m_state[11];
     }
     m_length = length + m_length;
-    
+
     // if we've got anything stuffed away, use it now
     if (m_remainder)
     {
@@ -569,14 +568,14 @@ void SpookyHash::Update(const void *message, size_t length)
     {
         u.p8 = (const uint8 *)message;
     }
-    
+
     // handle all whole blocks of sc_blockSize bytes
     end = u.p64 + (length/sc_blockSize)*sc_numVars;
     remainder = (uint8)(length-((const uint8 *)end-u.p8));
     if (ALLOW_UNALIGNED_READS || (u.i & 0x7) == 0)
     {
         while (u.p64 < end)
-        { 
+        {
             Mix(u.p64, h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11);
 	    u.p64 += sc_numVars;
         }
@@ -584,7 +583,7 @@ void SpookyHash::Update(const void *message, size_t length)
     else
     {
         while (u.p64 < end)
-        { 
+        {
             memcpy(m_data, u.p8, sc_blockSize);
             Mix(m_data, h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11);
 	    u.p64 += sc_numVars;
@@ -594,7 +593,7 @@ void SpookyHash::Update(const void *message, size_t length)
     // stuff away the last few bytes
     m_remainder = remainder;
     memcpy(m_data, end, remainder);
-    
+
     // stuff away the variables
     m_state[0] = h0;
     m_state[1] = h1;
@@ -622,10 +621,10 @@ void SpookyHash::Final(uint64 *hash1, uint64 *hash2)
         Short( m_data, m_length, hash1, hash2);
         return;
     }
-    
+
     const uint64 *data = (const uint64 *)m_data;
     uint8 remainder = m_remainder;
-    
+
     uint64 h0 = m_state[0];
     uint64 h1 = m_state[1];
     uint64 h2 = m_state[2];
@@ -651,7 +650,7 @@ void SpookyHash::Final(uint64 *hash1, uint64 *hash2)
     memset(&((uint8 *)data)[remainder], 0, (sc_blockSize-remainder));
 
     ((uint8 *)data)[sc_blockSize-1] = remainder;
-    
+
     // do some final mixing
     End(data, h0,h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11);
 

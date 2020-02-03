@@ -2,7 +2,9 @@
 //  ogl_direct.h
 //
 //  Created by Edmund Kapusniak on 01/01/2015.
-//  Copyright (c) 2015 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2015 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -21,11 +23,11 @@ class ogl_context;
 /*
     glBegin-style direct vertex specification.  Allows experimentation.
     Attribute indexes are:
-    
+
         float4 position : 0
         float4 colour   : 1
         float4 texcoord : 2
- 
+
 */
 
 
@@ -35,8 +37,8 @@ public:
 
     explicit ogl_direct( ogl_context* ogl );
     ~ogl_direct();
-    
-    
+
+
     void begin( GLenum pmode );
     void colour( float r, float g, float b, float a = 1.0 );
     void colour( float4 colour );
@@ -45,8 +47,8 @@ public:
     void vertex( float x, float y, float z = 0.0f, float w = 1.0f );
     void vertex( float4 position );
     void end();
-    
-    
+
+
 private:
 
     struct v
@@ -55,11 +57,11 @@ private:
         float4 colour;
         float4 texcoord;
     };
-    
-    
+
+
     void submit();
-    
-    
+
+
     ogl_context* ogl;
 
     GLuint  vao;
@@ -77,7 +79,7 @@ private:
     v*      p;
     size_t  index;
     size_t  count;
-    
+
 
 };
 
@@ -114,21 +116,21 @@ inline void ogl_direct::vertex( float4 position )
     vertex.position = position;
     vertex.colour   = vcolour;
     vertex.texcoord = vtexcoord;
-    
+
     if ( isfirst )
     {
         first = vertex;
         isfirst = false;
     }
-    
+
     prev1 = prev0;
     prev0 = vertex;
-    
+
     if ( index >= count )
     {
         submit();
     }
-    
+
     p[ index++ ] = vertex;
 }
 

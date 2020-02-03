@@ -2,7 +2,9 @@
 //  uic_control.cpp
 //
 //  Created by Edmund Kapusniak on 27/12/2014.
-//  Copyright (c) 2014 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2014 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 

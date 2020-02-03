@@ -1,8 +1,10 @@
 //
-// symkey.h
+//  symkey.h
 //
-// Created 3rd October 2013.
-// (c) Edmund Kapusniak 2013.  All rights reserved.
+//  Created 3rd October 2013.
+//  Copyright (c) Edmund Kapusniak 2013.  Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -46,7 +48,7 @@ private:
     hash32_t    shash;
     const char* sname;
     size_t      ssize;
-    
+
 };
 
 

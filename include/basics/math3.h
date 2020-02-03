@@ -2,7 +2,9 @@
 //  math3.h
 //
 //  Created by Edmund Kapusniak on 02/12/2014.
-//  Copyright (c) 2014 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2014 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -41,10 +43,10 @@ struct float2
     };
         float v[ 2 ];
     };
-    
+
     float& operator [] ( size_t index );
     float operator [] ( size_t index ) const;
-    
+
 };
 
 
@@ -54,7 +56,7 @@ struct float3
     float3();
     float3( float x, float y, float z );
     float3( float2 xy, float z );
-    
+
     union { struct
     {
         float x;
@@ -63,12 +65,12 @@ struct float3
     };
         float v[ 3 ];
     };
-    
+
     float& operator [] ( size_t index );
     float operator [] ( size_t index ) const;
-    
+
     float2 xy() const;
-    
+
 };
 
 
@@ -79,7 +81,7 @@ struct float4
     float4( float x, float y, float z, float w );
     float4( float2 xy, float z, float w );
     float4( float3 xyz, float w );
-    
+
     union { struct
     {
         float x;
@@ -89,13 +91,13 @@ struct float4
     };
         float v[ 4 ];
     };
-    
+
     float& operator [] ( size_t index );
     float operator [] ( size_t index ) const;
-    
+
     float3 xyz();
     float2 xy();
-    
+
 };
 
 
@@ -109,7 +111,7 @@ struct matrix2
         float m00, float m10,
         float m01, float m11
     );
-    
+
     float2 m[ 2 ];
 
     float2& operator [] ( size_t index );
@@ -128,12 +130,12 @@ struct matrix3
         float m01, float m11, float m21,
         float m02, float m12, float m22
     );
-    
+
     float3 m[ 3 ];
 
     float3& operator [] ( size_t index );
     float3 operator [] ( size_t index ) const;
-    
+
 };
 
 
@@ -148,12 +150,12 @@ struct matrix4
         float m02, float m12, float m22, float m32,
         float m03, float m13, float m23, float m33
     );
-    
+
     float4 m[ 4 ];
 
     float4& operator [] ( size_t index );
     float4 operator [] ( size_t index ) const;
-    
+
 };
 
 
@@ -273,16 +275,16 @@ inline float2 slerp( float2 a, float2 b, float t )
 {
     /*
         We expect a and b to be normalised.  From Shoemake:
-     
+
         cos Z = a . b ; ( sin [ ( 1 - t )Z ] a + sin [ tZ ] b ) / sin Z
-        
+
         But we can break sin [ ( 1 - t )Z ] into:
-        
+
             sin [ Z - tZ ]
             sin Z cos tZ - cos Z sin tZ
-            
+
         Giving:
-        
+
             ( sin Z cos [ tZ ] a - cos Z sin [ tZ ] a + sin [ tZ ] b ) / sin Z
             ( sin Z cos [ tZ ] a + sin [ tZ ] b - cos Z sin [ tZ ] a ) / sin Z
             cos [ tZ ] a + ( sin [ tZ ] b - cos Z sin [ tZ ] a ) / sin Z
@@ -303,7 +305,7 @@ inline float2 slerp_step( float2 a, float2 b, float t, float* out_step )
         Finds the slerp step parameter to step between a and b in steps of
         t.  This is 2 * a . b.
     */
-    
+
     float2 next = slerp( a, b, t );
     *out_step = 2.0f * dot( a, next );
     return next;
@@ -316,7 +318,7 @@ inline float2 slerp_next( float2 a, float2 b, float step )
         the great circle between a and b, and is the same angle from b as b
         is from a.
     */
-    
+
     return step * b - a;
 }
 
@@ -492,7 +494,7 @@ inline matrix3 inverse( const matrix3& m )
         // This is a 2D transformation matrix.  It can be decomposed into
         // a rotation part R and a translation part T.  M = R * T.  Therefore
         // the inverse M' = T' * R', since M * M' = R * T * T' * R' = I.
-        
+
         matrix2 r = matrix2
         (
             m[ 0 ][ 0 ], m[ 1 ][ 0 ],
@@ -500,18 +502,18 @@ inline matrix3 inverse( const matrix3& m )
         );
         matrix2 r_inverse = inverse( r );
         float2 t_inverse = -float2( m[ 0 ][ 2 ], m[ 1 ][ 2 ] );
-        
-        
+
+
         // And instead of doing a full 3x3 multiply to combine T' * R', we
         // can exploit the fact that a lot of the elements are 0.
-        
+
         float a = r_inverse[ 0 ][ 0 ];
         float b = r_inverse[ 1 ][ 0 ];
         float c = r_inverse[ 0 ][ 1 ];
         float d = r_inverse[ 1 ][ 1 ];
         float p = a * t_inverse.x + c * t_inverse.y;
         float q = b * t_inverse.x + d * t_inverse.y;
-        
+
         return matrix3
         (
             a, b, 0.0f,

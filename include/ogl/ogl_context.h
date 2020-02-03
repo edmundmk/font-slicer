@@ -2,7 +2,9 @@
 //  ogl_context.h
 //
 //  Created by Edmund Kapusniak on 27/11/2014.
-//  Copyright (c) 2014 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2014 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -244,20 +246,20 @@ public:
     void (*glDeleteVertexArrays)( GLsizei n, const GLuint *arrays );
     void (*glGenVertexArrays)( GLsizei n, GLuint *arrays );
     GLboolean (*glIsVertexArray)( GLuint array );
-    
+
     // OES_mapbuffer
     void (*glGetBufferPointerv)( GLenum target, GLenum pname, GLvoid** params );
     GLvoid* (*glMapBuffer)( GLenum target, GLenum access );
     GLboolean (*glUnmapBuffer)( GLenum target );
-    
+
     // EXT_map_buffer_range
     GLvoid* (*glMapBufferRange)( GLenum target, GLintptr offset, GLsizeiptr length, GLbitfield access );
     void (*glFlushMappedBufferRange)( GLenum target, GLintptr offset, GLsizeiptr length );
-    
+
     // EXT_debug_label
     void (*glLabelObject)( GLenum type, GLuint object, GLsizei length, const GLchar *label );
     void (*glGetObjectLabel)( GLenum type, GLuint object, GLsizei bufSize, GLsizei *length, GLchar *label );
-    
+
     // EXT_debug_marker
     void (*glInsertEventMarker)( GLsizei length, const GLchar *marker );
     void (*glPushGroupMarker)( GLsizei length, const GLchar *marker );
@@ -267,7 +269,7 @@ public:
 private:
 
     void (*glBindFragDataLocation)(	GLuint program, GLuint colorNumber, const GLchar *name );
-     
+
 };
 
 

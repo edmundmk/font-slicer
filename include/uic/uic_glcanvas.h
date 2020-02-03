@@ -2,7 +2,9 @@
 //  uic_glcanvas.h
 //
 //  Created by Edmund Kapusniak on 28/11/2014.
-//  Copyright (c) 2014 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2014 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -29,8 +31,8 @@ public:
 
     uic_glcanvas();
     virtual ~uic_glcanvas();
-    
-    
+
+
 protected:
 
     virtual void reparent( void* parent );

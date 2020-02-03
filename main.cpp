@@ -2,7 +2,9 @@
 //  main.cpp
 //
 //  Created by Edmund Kapusniak on 18/11/2014.
-//  Copyright (c) 2014 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2014 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -277,16 +279,16 @@ private:
     GLuint vao;
     GLuint vbo;
     GLuint ibo;
-    
+
     GLuint fbo;
     GLsizei texture_width;
     GLsizei texture_height;
     GLuint texture;
-    
+
     GLuint blit_vao;
     GLuint blit_vbo;
     GLuint blit_ibo;
-    
+
     float emsize;
     float line_height;
     std::unordered_map< char32_t, glyph > glyphs;
@@ -294,7 +296,7 @@ private:
 
     float2 offset;
     float  scale;
-    
+
     bool drag_active;
     float2 drag_start;
 
@@ -345,11 +347,11 @@ void fe_glcanvas::setup_context( ogl_context* ogl )
     ogl->glBindAttribLocation( program, 6, "a_r1" );
     ogl->glBindAttribLocation( program, 7, "a_r2" );
     ogl->link_program( program );
-    
+
     u_transform = ogl->glGetUniformLocation( program, "u_transform" );
     u_viewport = ogl->glGetUniformLocation( program, "u_viewport" );
-    
-    
+
+
     vshader = ogl->compile_shader( GL_VERTEX_SHADER, blit_vshader );
     fshader = ogl->compile_shader( GL_FRAGMENT_SHADER, blit_fshader );
     blit = ogl->glCreateProgram();
@@ -360,38 +362,38 @@ void fe_glcanvas::setup_context( ogl_context* ogl )
     ogl->glBindAttribLocation( blit, 0, "a_position" );
     ogl->glBindAttribLocation( blit, 1, "a_texcoord" );
     ogl->link_program( blit );
-    
+
     u_texture = ogl->glGetUniformLocation( blit, "u_texture" );
-    
+
     ogl->glUseProgram( blit );
     ogl->glUniform1i( u_texture, 0 );
     ogl->glUseProgram( 0 );
-    
-    
+
+
     std::vector< vertex > vbuffer;
     std::vector< GLuint > ibuffer;
-    
+
     font_slicer fs( font_path.c_str() );
     emsize = fs.units_per_em();
     line_height = fs.line_height();
-    
+
     for ( const char* j = jabberwocky; *j; ++j )
     {
         char32_t c = *j;
         if ( glyphs.find( c ) != glyphs.end() )
             continue;
-    
+
         font_glyph g = fs.glyph_info_for_char( c );
 
         glyph gc;
         gc.advance = g.advance;
         gc.count = 0;
         gc.indices = (const GLvoid*)( ibuffer.size() * sizeof( GLuint ) );
-        
+
         for ( size_t i = 0; i < g.slices.size(); ++i )
         {
             const font_slice& s = g.slices[ i ];
-            
+
             vertex v;
             v.l0 = s.left.p[ 0 ];
             v.l1 = s.left.p[ 1 ];
@@ -399,7 +401,7 @@ void fe_glcanvas::setup_context( ogl_context* ogl )
             v.r0 = s.right.p[ 0 ];
             v.r1 = s.right.p[ 1 ];
             v.r2 = s.right.p[ 2 ];
-            
+
             rect r
             (
                 min( min( v.l0.x, v.l1.x ), v.l2.x ),
@@ -411,10 +413,10 @@ void fe_glcanvas::setup_context( ogl_context* ogl )
 
             /*
                 2    3
-            
+
                 0    1
             */
-            
+
             GLuint base = (GLuint)vbuffer.size();
             ibuffer.emplace_back( base + 0 );
             ibuffer.emplace_back( base + 1 );
@@ -423,7 +425,7 @@ void fe_glcanvas::setup_context( ogl_context* ogl )
             ibuffer.emplace_back( base + 2 );
             ibuffer.emplace_back( base + 1 );
             ibuffer.emplace_back( base + 3 );
-            
+
             v.position = float2( r.minx, r.miny );
             v.rounding = float2( 0.0f, 0.0f );
             vbuffer.push_back( v );
@@ -431,30 +433,30 @@ void fe_glcanvas::setup_context( ogl_context* ogl )
             v.position = float2( r.maxx, r.miny );
             v.rounding = float2( 1.0f, 0.0f );
             vbuffer.push_back( v );
-            
+
             v.position = float2( r.minx, r.maxy );
             v.rounding = float2( 0.0f, 1.0f );
             vbuffer.push_back( v );
-            
+
             v.position = float2( r.maxx, r.maxy );
             v.rounding = float2( 1.0f, 1.0f );
             vbuffer.push_back( v );
-            
+
             gc.count += 6;
         }
-        
+
         glyphs.emplace( g.c, gc );
     }
 
-    
+
     for ( size_t i = 0; i < fs.kern_count(); ++i )
     {
         font_kern k = fs.kern( i );
         uint64_t key = (uint64_t)k.a << 32 | (uint64_t)k.b;
         kerning.emplace( key, k.kerning );
     }
-    
-    
+
+
     ogl->glGenBuffers( 1, &vbo );
     ogl->glBindBuffer( GL_ARRAY_BUFFER, vbo );
     ogl->glBufferData( GL_ARRAY_BUFFER, vbuffer.size() * sizeof( vertex ), vbuffer.data(), GL_STATIC_DRAW );
@@ -462,7 +464,7 @@ void fe_glcanvas::setup_context( ogl_context* ogl )
     ogl->glGenBuffers( 1, &ibo );
     ogl->glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibo );
     ogl->glBufferData( GL_ELEMENT_ARRAY_BUFFER, ibuffer.size() * sizeof( GLuint ), ibuffer.data(), GL_STATIC_DRAW );
-    
+
     ogl->glGenVertexArrays( 1, &vao );
     ogl->glBindVertexArray( vao );
     ogl->glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibo );
@@ -486,7 +488,7 @@ void fe_glcanvas::setup_context( ogl_context* ogl )
     ogl->glBindVertexArray( 0 );
     ogl->glBindBuffer( GL_ARRAY_BUFFER, 0 );
     ogl->glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
-    
+
     texture_width = 1920;
     texture_height = 1080;
     ogl->glGenTextures( 1, &texture );
@@ -502,17 +504,17 @@ void fe_glcanvas::setup_context( ogl_context* ogl )
     ogl->glBindFramebuffer( GL_FRAMEBUFFER, fbo );
     ogl->glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0 );
     ogl->glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-    
+
     ogl->glGenBuffers( 1, &blit_vbo );
     ogl->glBindBuffer( GL_ARRAY_BUFFER, blit_vbo );
     ogl->glBufferData( GL_ARRAY_BUFFER, sizeof( blit_vertex ) * 4, NULL, GL_STREAM_DRAW );
-    
+
     static const GLubyte indices[] = { 0, 1, 2, 2, 1, 3 };
-    
+
     ogl->glGenBuffers( 1, &blit_ibo );
     ogl->glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, blit_ibo );
     ogl->glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( GLubyte ) * 6, indices, GL_STATIC_DRAW );
-    
+
     ogl->glGenVertexArrays( 1, &blit_vao );
     ogl->glBindVertexArray( blit_vao );
     ogl->glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, blit_ibo );
@@ -520,11 +522,11 @@ void fe_glcanvas::setup_context( ogl_context* ogl )
     ogl->glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, sizeof( blit_vertex ), (const GLvoid*)offsetof( blit_vertex, position ) );
     ogl->glEnableVertexAttribArray( 1 );
     ogl->glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, sizeof( blit_vertex ), (const GLvoid*)offsetof( blit_vertex, texcoord ) );
-    
+
     ogl->glBindVertexArray( 0 );
     ogl->glBindBuffer( GL_ARRAY_BUFFER, 0 );
     ogl->glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
-    
+
 }
 
 void fe_glcanvas::draw( ogl_context* ogl )
@@ -539,13 +541,13 @@ void fe_glcanvas::draw( ogl_context* ogl )
         ogl->glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texture_width, texture_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL );
         ogl->glBindTexture( GL_TEXTURE_2D, 0 );
     }
-    
+
     ogl->glBindFramebuffer( GL_FRAMEBUFFER, fbo );
 
     ogl->glViewport( 0.0f, 0.0f, viewport.width(), viewport.height() );
     ogl->glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
     ogl->glClear( GL_COLOR_BUFFER_BIT );
-    
+
     // Transform into viewport coordinates (same coordinates as gl_FragCoord,
     // origin lower left, one pixel is one unit).
     float s = ( 12.0f / emsize ) * scale;
@@ -557,30 +559,30 @@ void fe_glcanvas::draw( ogl_context* ogl )
     );
 
 
-    
+
     ogl->glEnable( GL_BLEND );
     ogl->glBlendEquation( GL_FUNC_ADD );
     ogl->glBlendFunc( GL_ONE, GL_ONE );
-    
+
     ogl->glUseProgram( program );
     ogl->glUniform2f( u_viewport, viewport.width(), viewport.height() );
-    
+
     ogl->glBindVertexArray( vao );
-    
+
     float2 p = float2( 0.0f, 0.0f );
     char32_t prev = 0;
     for ( const char* j = jabberwocky; *j; ++j )
     {
         char32_t c = *j;
-        
+
         if ( c == '\n' )
         {
             p.x = 0.0f;
             p.y -= line_height;
             continue;
         }
-        
-        
+
+
         uint64_t key = (uint64_t)prev << 32 | (uint64_t)c;
         auto k = kerning.find( key );
         if ( k != kerning.end() )
@@ -588,37 +590,37 @@ void fe_glcanvas::draw( ogl_context* ogl )
             p.x += k->second;
         }
         prev = c;
-        
-        
+
+
         matrix3 model
         (
             1.0f, 0.0f, 0.0f,
             0.0f, 1.0f, 0.0f,
             p.x,  p.y,  1.0f
         );
-        
+
         matrix3 tf = model * view;
         ogl->glUniformMatrix3fv( u_transform, 1, GL_FALSE, &tf[ 0 ][ 0 ] );
-        
+
         const glyph& g = glyphs.at( *j );
         ogl->glDrawElements( GL_TRIANGLES, g.count, GL_UNSIGNED_INT, g.indices );
 
         p.x += g.advance;
 
     }
-    
-    
+
+
     ogl->glBindVertexArray( 0 );
     ogl->glUseProgram( 0 );
     ogl->glDisable( GL_BLEND );
-    
+
     ogl->glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-    
+
     ogl->glViewport( 0.0f, 0.0f, viewport.width(), viewport.height() );
-    
+
     float tw = viewport.width() / texture_width;
     float th = viewport.height() / texture_height;
-    
+
     const blit_vertex v[] =
     {
         { float2( -1.0f, -1.0f ), float2( 0.0f, 0.0f ) },
@@ -626,24 +628,24 @@ void fe_glcanvas::draw( ogl_context* ogl )
         { float2( -1.0f,  1.0f ), float2( 0.0f, th ) },
         { float2(  1.0f,  1.0f ), float2( tw, th ) }
     };
-    
+
     ogl->glBindBuffer( GL_ARRAY_BUFFER, blit_vbo );
     ogl->glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof( v ), v );
     ogl->glBindBuffer( GL_ARRAY_BUFFER, 0 );
-    
+
     ogl->glUseProgram( blit );
-    
+
     ogl->glActiveTexture( GL_TEXTURE0 );
     ogl->glBindTexture( GL_TEXTURE_2D, texture );
-    
+
     ogl->glBindVertexArray( blit_vao );
     ogl->glDrawElements( GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0 );
     ogl->glBindVertexArray( 0 );
-    
+
     ogl->glBindTexture( GL_TEXTURE_2D, 0 );
     ogl->glUseProgram( 0 );
 
-    
+
 }
 
 

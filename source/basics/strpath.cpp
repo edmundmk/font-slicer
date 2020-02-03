@@ -2,7 +2,9 @@
 //  strpath.cpp
 //
 //  Created by Edmund Kapusniak on 28/12/2012.
-//  Copyright (c) 2012 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2012 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -25,7 +27,7 @@ static size_t find_slash( const std::string& path )
 {
     size_t ifslash = path.rfind( '/' );
     size_t ibslash = path.rfind( '\\' );
-    
+
     if ( ifslash != std::string::npos )
     {
         if ( ibslash != std::string::npos )
@@ -37,7 +39,7 @@ static size_t find_slash( const std::string& path )
     {
         return ibslash + 1;
     }
-    
+
     return 0;
 }
 
@@ -68,7 +70,7 @@ bool path_is_absolute( const std::string& path )
     size_t iroot = 0;
     if ( has_drive_letter( path ) )
         iroot = 2;
-    
+
     return path.size() > iroot
         && ( path[ iroot ] == '/' || path[ iroot ] == '\\' );
 }
@@ -148,7 +150,7 @@ std::string path_canonicalize( const std::string& path )
 {
     std::string result;
     result.reserve( path.size() );
-    
+
     enum ParseState
     {
         PARSE_ANY,
@@ -156,11 +158,11 @@ std::string path_canonicalize( const std::string& path )
         PARSE_PERIOD,
         PARSE_PERIOD_PERIOD
     };
-    
+
     ParseState  state           = PARSE_SEPARATOR;
     size_t      num_components  = 0;
     size_t      i               = 0;
-    
+
     if ( has_drive_letter( path ) )
     {
         result.append( path, 0, 2 );
@@ -189,7 +191,7 @@ std::string path_canonicalize( const std::string& path )
                 result.push_back( path[ i ] );
             }
             break;
-        
+
         case PARSE_SEPARATOR:
             if ( path[ i ] == '.' )
             {
@@ -205,7 +207,7 @@ std::string path_canonicalize( const std::string& path )
                 state = PARSE_ANY;
             }
             break;
-        
+
         case PARSE_PERIOD:
             if ( path[ i ] == '.' )
             {
@@ -221,7 +223,7 @@ std::string path_canonicalize( const std::string& path )
                 state = PARSE_ANY;
             }
             break;
-        
+
         case PARSE_PERIOD_PERIOD:
             if ( i >= path.size() || path[ i ] == '/' || path[ i ] == '\\' )
             {
@@ -265,24 +267,24 @@ std::string path_relative(
 {
     std::string dpath = path_canonicalize( directory );
     std::string tpath = path_canonicalize( target );
-    
+
     // Check for relative to current directory.
     if ( dpath.compare( PERIOD_SEPARATOR ) == 0 )
         return tpath;
-    
+
     // Either both paths must be absolute or both relative to a common base.
     if ( path_is_absolute( dpath ) != path_is_absolute( tpath ) )
         return tpath;
-    
+
     // Any drive letters must match or we can't do anything.
     if ( has_drive_letter( dpath ) &&
             ( ! has_drive_letter( tpath ) || dpath[ 0 ] != tpath[ 0 ] ) )
         return tpath;
-    
+
     // Make sure the directory ends with a separator.
     if ( dpath.back() != SEPARATOR )
         dpath.push_back( SEPARATOR );
-    
+
     // Check if target refers to directory.
     if ( tpath.back() == SEPARATOR )
     {
@@ -294,7 +296,7 @@ std::string path_relative(
         if ( dpath.compare( 0, dpath.size() - 1, tpath ) == 0 )
             return PERIOD_SEPARATOR;
     }
-    
+
     // Remove common prefix.
     size_t icommon = 0;
     for ( size_t i = 0; i < dpath.size() && i < tpath.size()
@@ -307,10 +309,10 @@ std::string path_relative(
     dpath = dpath.substr( icommon );
     tpath = tpath.substr( icommon );
     assert( ! dpath.size() || dpath[ 0 ] != SEPARATOR );
-        
+
     // Build result path.
     std::string result;
-    
+
     // Each remaining path component in dpath must be undone by ../
     size_t islash = dpath.find( SEPARATOR );
     while ( islash != std::string::npos )
@@ -318,10 +320,10 @@ std::string path_relative(
         result.append( PERIOD_PERIOD_SEPARATOR );
         islash = dpath.find( SEPARATOR, islash + 1 );
     }
-    
+
     // Add the remainder of tpath.
     result += tpath;
-    
+
     return result;
 }
 
@@ -330,7 +332,7 @@ std::string path_join( const std::string& a, const std::string& b )
 {
     if ( ! a.size() || path_is_absolute( b ) )
         return b;
-    
+
     return path_canonicalize( a + '/' + b );
 }
 

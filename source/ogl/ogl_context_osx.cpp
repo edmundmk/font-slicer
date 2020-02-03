@@ -2,7 +2,9 @@
 //  ogl_context_osx.cpp
 //
 //  Created by Edmund Kapusniak on 01/12/2014.
-//  Copyright (c) 2014 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2014 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -114,26 +116,26 @@ ogl_context::ogl_context()
 
 
     kind = OGL_CORE;
-    
+
 
     ogl_version version;
     ::glGetIntegerv( GL_MAJOR_VERSION, &version.major );
     ::glGetIntegerv( GL_MINOR_VERSION, &version.minor );
-    
+
     std::unordered_set< symkey > extensions;
     GLint num_extensions = 0;
     ::glGetIntegerv( GL_NUM_EXTENSIONS, &num_extensions );
-    
+
     for ( GLint i = 0; i < num_extensions; ++i )
     {
         const GLubyte* extension = ::glGetStringi( GL_EXTENSIONS, i );
         extensions.emplace( (const char*)extension );
     }
-    
+
 
     if ( version >= ogl_version( 3, 2 ) )
     {
-    
+
         glActiveTexture = ::glActiveTexture;
         glAttachShader = ::glAttachShader;
         glBindAttribLocation = ::glBindAttribLocation;
@@ -271,7 +273,7 @@ ogl_context::ogl_context()
         glVertexAttrib4fv = ::glVertexAttrib4fv;
         glVertexAttribPointer = ::glVertexAttribPointer;
         glViewport = ::glViewport;
-    
+
         glBindVertexArray = ::glBindVertexArray;
         glDeleteVertexArrays = ::glDeleteVertexArrays;
         glGenVertexArrays = ::glGenVertexArrays;
@@ -283,14 +285,14 @@ ogl_context::ogl_context()
         glGetBufferPointerv = ::glGetBufferPointerv;
         glMapBuffer = ::glMapBuffer;
         glUnmapBuffer = ::glUnmapBuffer;
-    
+
         EXT_map_buffer_range = true;
         glMapBufferRange = ::glMapBufferRange;
         glFlushMappedBufferRange = ::glFlushMappedBufferRange;
-        
+
         EXT_sRGB = true;
         ::glEnable( GL_FRAMEBUFFER_SRGB );
-        
+
         glBindFragDataLocation = ::glBindFragDataLocation;
 
     }
@@ -318,7 +320,7 @@ ogl_context::ogl_context()
         glReleaseShaderCompiler = ::oglReleaseShaderCompiler;
         glShaderBinary = ::oglShaderBinary;
     }
-    
+
 
     if ( extensions.count( "GL_EXT_debug_label" ) )
     {
@@ -330,7 +332,7 @@ ogl_context::ogl_context()
         glLabelObject = ::oglLabelObject;
         glGetObjectLabel = ::oglGetObjectLabel;
     }
-    
+
     if ( extensions.count( "GL_EXT_debug_marker" ) )
     {
         glInsertEventMarker = ::glInsertEventMarkerEXT;

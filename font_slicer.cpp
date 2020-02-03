@@ -2,7 +2,9 @@
 //  font_slicer.cpp
 //
 //  Created by Edmund Kapusniak on 22/12/2014.
-//  Copyright (c) 2014 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2014 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -29,7 +31,7 @@ static const float EPSILON = 0.01f;
     Decompose font shapes into slices.  A slice is a trapezoidal shape
     where the top and bottom edges are horizontal lines, and the left and
     right edges are quadratic bezier curves.
-    
+
     Process:
         Find corner points (where the tangent is discontinuous).
         Find vertical extremes (apex and nadir of curves), splitting outline.
@@ -38,20 +40,20 @@ static const float EPSILON = 0.01f;
         Some slices will have complex curves as the left and right edges.
             Simplify these slices by approximating with quadratic Bezier
             curves, splitting where necessary.
-    
+
     Each slice can be rendered using the GPU - vertical converage is easy, and
     horizontally we can test each pixel against the edges.  We can get a
     fairly accurage approximation of coverage by considering the horizontal
     distance through the centre of the pixel to the slab.  This may give
     more accurate antialiasing at small pixel sizes than distance-based
     methods (since each slice's contribution is considered separately).
-    
+
     This gives us on-GPU rendering of scalable text (though we do not have the
     ability to rotate).  We can render to an FBO to cache glyphs for reuse,
     or just render text directly.
 
     At least that is the plan.
- 
+
 */
 
 
@@ -128,7 +130,7 @@ struct path_slice
     path_vertex*    br;         // vertex at maxx, maxy
     bool            lreversed;  // left edge is reversed
     bool            rreversed;  // right edge is reversed
-    
+
     qbezier         left;       // approximated left edge
     qbezier         right;      // approximated right edge
 };
@@ -146,13 +148,13 @@ struct path
     long miny;
     long maxx;
     long maxy;
-    
+
     std::vector< path_event > p;
     std::vector< path_vertex* > o;
     std::vector< std::unique_ptr< path_vertex > > v;
     std::vector< std::unique_ptr< path_edge > > e;
     std::vector< path_slice > s;
-    
+
 };
 
 
@@ -205,7 +207,7 @@ static void outline_to_path( path* path, FT_BBox bbox, FT_Outline* outline )
     path->miny = bbox.yMin;
     path->maxx = bbox.xMax;
     path->maxy = bbox.yMax;
-    
+
     FT_Outline_Funcs c;
     c.move_to   = move_to;
     c.line_to   = line_to;
@@ -213,7 +215,7 @@ static void outline_to_path( path* path, FT_BBox bbox, FT_Outline* outline )
     c.cubic_to  = cubic_to;
     c.shift     = 0;
     c.delta     = 0;
-    
+
     FT_Outline_Decompose( outline, &c, path );
     path->p.emplace_back( PATH_END );
 }
@@ -238,7 +240,7 @@ static void build_polygon( path* path )
     for ( size_t i = 0; i < path->p.size(); ++i )
     {
         path_event_kind kind = path->p[ i ].kind;
-        
+
         if ( edge && ( kind == PATH_MOVE_TO || kind == PATH_END ) )
         {
             if ( first && last->p.x == first->p.x && last->p.y == first->p.y )
@@ -258,17 +260,17 @@ static void build_polygon( path* path )
                 v->e[ 0 ] = edge;
                 v->e[ 1 ] = e.get();
                 v->p = last->p;
-                
+
                 e->kind = PATH_LINE_TO;
                 e->v[ 0 ] = v.get();
                 e->v[ 1 ] = first;
-                
+
                 first->e[ 0 ] = e.get();
-                
+
                 path->v.push_back( std::move( v ) );
                 path->e.push_back( std::move( e ) );
             }
-            
+
             first = nullptr;
             edge  = nullptr;
             last  = nullptr;
@@ -286,19 +288,19 @@ static void build_polygon( path* path )
             v->e[ 0 ] = edge;
             v->e[ 1 ] = nullptr;
             v->p = last->p;
-            
+
             if ( ! first )
             {
                 first = v.get();
                 path->o.push_back( v.get() );
             }
-            
+
             if ( edge )
             {
                 edge->v[ 1 ] = v.get();
                 edge = nullptr;
             }
-            
+
             auto e = std::make_unique< path_edge >();
             e->kind = kind;
             e->v[ 0 ] = v.get();
@@ -328,13 +330,13 @@ static void build_polygon( path* path )
                 i += 1;
                 last = &path->p[ i ];
             }
-            
+
             edge = e.get();
-            
+
             path->v.push_back( std::move( v ) );
             path->e.push_back( std::move( e ) );
         }
-        
+
     }
 
 }
@@ -358,7 +360,7 @@ static bool split_edge( path* path, path_edge* e, float t )
         lbezier l( e->v[ 0 ]->p, e->v[ 1 ]->p );
         lbezier split[ 2 ];
         l.split( t, split );
-        
+
         float2 s = split[ 0 ].p[ 1 ];
         if ( lengthsq( s - l.p[ 0 ] ) < EPSILON * EPSILON )
             return false;
@@ -372,15 +374,15 @@ static bool split_edge( path* path, path_edge* e, float t )
 
         e->c[ 0 ] = split[ 0 ].p[ 1 ];
         e->v[ 1 ] = v.get();
-        
+
         v->e[ 0 ] = e;
         v->e[ 1 ] = f.get();
         v->p = split[ 0 ].p[ 1 ];
-        
+
         f->kind = PATH_LINE_TO;
         f->v[ 0 ] = v.get();
         f->v[ 1 ] = vend;
-        
+
         assert( vend->e[ 0 ] == e );
         vend->e[ 0 ] = f.get();
 
@@ -388,45 +390,45 @@ static bool split_edge( path* path, path_edge* e, float t )
         path->e.push_back( std::move( f ) );
         return true;
     }
-    
+
     case PATH_QUAD_TO:
     {
         // Split the curve at t, creating a corner vertex.
         qbezier q( e->v[ 0 ]->p, e->c[ 0 ], e->v[ 1 ]->p );
         qbezier split[ 2 ];
         q.split( t, split );
-        
+
         float2 s = split[ 0 ].p[ 2 ];
         if ( lengthsq( s - q.p[ 0 ] ) < EPSILON * EPSILON )
             return false;
         if ( lengthsq( s - q.p[ 2 ] ) < EPSILON * EPSILON )
             return false;
-        
+
         auto v = std::make_unique< path_vertex >();
         auto f = std::make_unique< path_edge >();
-        
+
         path_vertex* vend = e->v[ 1 ];
 
         e->c[ 0 ] = split[ 0 ].p[ 1 ];
         e->v[ 1 ] = v.get();
-        
+
         v->e[ 0 ] = e;
         v->e[ 1 ] = f.get();
         v->p = split[ 0 ].p[ 2 ];
-        
+
         f->kind = PATH_QUAD_TO;
         f->v[ 0 ] = v.get();
         f->c[ 0 ] = split[ 1 ].p[ 1 ];
         f->v[ 1 ] = vend;
-        
+
         assert( vend->e[ 0 ] == e );
         vend->e[ 0 ] = f.get();
-        
+
         path->v.push_back( std::move( v ) );
         path->e.push_back( std::move( f ) );
         return true;
     }
-    
+
     case PATH_CUBIC_TO:
     {
         cbezier c( e->v[ 0 ]->p, e->c[ 0 ], e->c[ 1 ], e->v[ 1 ]->p );
@@ -438,7 +440,7 @@ static bool split_edge( path* path, path_edge* e, float t )
             return false;
         if ( lengthsq( s - c.p[ 3 ] ) < EPSILON * EPSILON )
             return false;
-        
+
         auto v = std::make_unique< path_vertex >();
         auto f = std::make_unique< path_edge >();
 
@@ -447,18 +449,18 @@ static bool split_edge( path* path, path_edge* e, float t )
         e->v[ 1 ] = v.get();
         e->c[ 0 ] = split[ 0 ].p[ 1 ];
         e->c[ 1 ] = split[ 0 ].p[ 2 ];
-        
+
         v->e[ 0 ] = e;
         v->e[ 1 ] = f.get();
         v->p = split[ 0 ].p[ 3 ];
         v->is_corner = true;
-        
+
         f->kind = PATH_CUBIC_TO;
         f->v[ 0 ] = v.get();
         f->c[ 0 ] = split[ 1 ].p[ 1 ];
         f->c[ 1 ] = split[ 1 ].p[ 2 ];
         f->v[ 1 ] = vend;
-        
+
         assert( vend->e[ 0 ] == e );
         vend->e[ 0 ] = f.get();
 
@@ -466,7 +468,7 @@ static bool split_edge( path* path, path_edge* e, float t )
         path->e.push_back( std::move( f ) );
         return true;
     }
-    
+
     default:
         return false;
     }
@@ -483,7 +485,7 @@ static path_vertex* split_edge(
 
 
     // Find edge which intersects horizontal line at a.
-    
+
     path_edge* e = nullptr;
     if ( reversed )
     {
@@ -514,7 +516,7 @@ static path_vertex* split_edge(
         l.solve_y( y, &t );
         break;
     }
-    
+
     case PATH_QUAD_TO:
     {
         qbezier q( e->v[ 0 ]->p, e->c[ 0 ], e->v[ 1 ]->p );
@@ -523,7 +525,7 @@ static path_vertex* split_edge(
         t = tt[ 0 ];
         break;
     }
-    
+
     case PATH_CUBIC_TO:
     {
         cbezier c( e->v[ 0 ]->p, e->c[ 0 ], e->c[ 1 ], e->v[ 1 ]->p );
@@ -532,22 +534,22 @@ static path_vertex* split_edge(
         t = tt[ 0 ];
         break;
     }
-    
+
     default:
         break;
     }
-    
-    
+
+
     // Attempt to split edge.
 
     if ( ! isnan( t ) && split_edge( path, e, t ) )
     {
         return e->v[ 1 ];
     }
-    
-    
+
+
     // Otherwise, return the endpoint closest to the split line.
-    
+
     float mid = ( e->v[ 0 ]->p.y + e->v[ 1 ]->p.y ) * 0.5f;
     if ( e->v[ 0 ]->p.y < e->v[ 1 ]->p.y )
     {
@@ -563,7 +565,7 @@ static path_vertex* split_edge(
         else
             return e->v[ 0 ];
     }
-    
+
 
 }
 
@@ -583,7 +585,7 @@ static float solve_edge( path_edge* e, float y )
         }
         break;
     }
-    
+
     case PATH_QUAD_TO:
     {
         qbezier q( e->v[ 0 ]->p, e->c[ 0 ], e->v[ 1 ]->p );
@@ -595,7 +597,7 @@ static float solve_edge( path_edge* e, float y )
         }
         break;
     }
-    
+
     case PATH_CUBIC_TO:
     {
         cbezier c( e->v[ 0 ]->p, e->c[ 0 ], e->c[ 1 ], e->v[ 1 ]->p );
@@ -607,14 +609,14 @@ static float solve_edge( path_edge* e, float y )
         }
         break;
     }
-    
+
     default:
         break;
     }
-    
-    
+
+
     // y should intersect edge, but just in case...
-    
+
     if ( e->v[ 0 ]->p.y < e->v[ 1 ]->p.y )
     {
         if ( y < e->v[ 0 ]->p.y )
@@ -629,7 +631,7 @@ static float solve_edge( path_edge* e, float y )
         else if ( y > e->v[ 0 ]->p.y )
             return e->v[ 0 ]->p.x;
     }
-    
+
     return ( e->v[ 0 ]->p.x + e->v[ 1 ]->p.x ) * 0.5f;
 }
 
@@ -662,7 +664,7 @@ static bool intersect( path* path, path_edge* a, path_edge* b )
     cbezier b_bezier = edge_to_bezier( b );
     std::pair< float, float > t[ 9 ];
     size_t count = solve_intersection( a_bezier, b_bezier, t );
-    
+
     bool split_a = false;
     bool split_b = false;
     for ( size_t i = 0; i < count; ++i )
@@ -677,11 +679,11 @@ static bool intersect( path* path, path_edge* a, path_edge* b )
         if ( split_a || split_b )
             break;
     }
-    
+
     if ( ! split_a && ! split_b )
         return false;
-        
-        
+
+
     /*
                     a
                     v
@@ -692,7 +694,7 @@ static bool intersect( path* path, path_edge* a, path_edge* b )
                      '''+
                   a_next
     */
-    
+
     path_edge* a_next;
     path_edge* b_next;
     if ( split_a && split_b )
@@ -735,14 +737,14 @@ static bool intersect( path* path, path_edge* a, path_edge* b )
     // Outer loop continues a_prev -> outer -> b_next.
     outer->e[ 1 ] = b_next;
     b_next->v[ 0 ] = outer;
-    
+
     // Inner loop continues b_prev -> inner -> a_next.
     inner->e[ 1 ] = a_next;
     a_next->v[ 0 ] = inner;
-    
+
     // And the inner loop is an independent outline.
     path->o.push_back( inner );
-    
+
     inner->is_corner = true;
     outer->is_corner = true;
 
@@ -764,7 +766,7 @@ restart:
                 goto restart;
             }
         }
-    
+
         // Move to next edge.
         e = e->v[ 1 ]->e[ 1 ];
         if ( e == o->e[ 1 ] )
@@ -793,11 +795,11 @@ static void find_corners( path* path )
 {
     size_t vertex_count = path->v.size();
     size_t edge_count = path->e.size();
-    
+
     for ( size_t i = 0; i < edge_count; ++i )
     {
         path_edge* e = path->e[ i ].get();
-        
+
         // Check for vertical extremes.
         if ( e->kind == PATH_QUAD_TO )
         {
@@ -832,21 +834,21 @@ static void find_corners( path* path )
                     t[ 1 ] = ( t[ 1 ] - t[ 0 ] ) / ( 1 - t[ 0 ] );
                 }
             }
-            
+
             if ( i >= 2 && split_edge( path, e, t[ 1 ] ) )
             {
                 e->v[ 1 ]->is_corner = true;
             }
 
         }
-        
+
     }
 
 
     for ( size_t i = 0; i < vertex_count; ++i )
     {
         path_vertex* v = path->v[ i ].get();
-    
+
 /*
         // Make endpoints of any straight line a corner.
         if ( v->e[ 0 ]->kind == PATH_LINE_TO || v->e[ 1 ]->kind == PATH_LINE_TO )
@@ -865,7 +867,7 @@ static void find_corners( path* path )
             continue;
         }
 */
-    
+
         // Find tangents.
         float2 t0;
         if ( v->e[ 0 ]->kind == PATH_LINE_TO )
@@ -880,7 +882,7 @@ static void find_corners( path* path )
         {
             t0 = v->p - v->e[ 0 ]->c[ 1 ];
         }
-        
+
         float2 t1;
         if ( v->e[ 1 ]->kind == PATH_LINE_TO )
         {
@@ -890,7 +892,7 @@ static void find_corners( path* path )
         {
             t1 = v->e[ 1 ]->c[ 0 ] - v->p;
         }
-        
+
         // Check angle.
         t0 = normalize( t0 );
         t1 = normalize( t1 );
@@ -900,7 +902,7 @@ static void find_corners( path* path )
         {
             v->is_corner = true;
         }
-        
+
         // Check for vertical extreme.
         if ( ( t0.y >= 0 && t1.y <= 0 ) || ( t0.y <= 0 && t1.y >= 0 ) )
         {
@@ -933,7 +935,7 @@ static path_vertex* sweep_split(
 
     if ( edge->corner == corner )
         return corner;
-    
+
     return split_edge
     (
         path,
@@ -949,10 +951,10 @@ static void sweep_slice(
         path* path, sweep_edge* left, sweep_edge* right, path_vertex* corner )
 {
     // Create a slice with the given left and right edges, down to the corner.
-    
+
     assert( left->left );
     assert( ! right->left );
-    
+
     path_slice slice;
     slice.tl          = left->top;
     slice.tr         = right->top;
@@ -960,10 +962,10 @@ static void sweep_slice(
     slice.br      = sweep_split( path, right, corner );
     slice.lreversed     = left->reversed;
     slice.rreversed    = right->reversed;
-    
+
     left->top = slice.bl;
     right->top = slice.br;
-    
+
     if ( slice.tl->p.y >= slice.bl->p.y )
     {
         return;
@@ -978,7 +980,7 @@ static void sweep_slice(
         slice.bl->p.x, slice.bl->p.y,
         slice.br->p.x, slice.br->p.y );
 */
-    
+
     path->s.push_back( slice );
 }
 
@@ -996,7 +998,7 @@ static void sweep_plane( path* path )
             corners.push_back( v );
         }
     }
-    
+
     std::sort
     (
         corners.begin(),
@@ -1006,8 +1008,8 @@ static void sweep_plane( path* path )
             return a->p.y < b->p.y || ( a->p.y == b->p.y && a->p.x < b->p.x );
         }
     );
-    
-    
+
+
     // Sweep plane from minimum y to maximum y.  Keep a data structure
     // indicating the intervals which are inside the polygon.
     std::list< sweep_edge > edges;
@@ -1023,13 +1025,13 @@ static void sweep_plane( path* path )
         for ( auto i = edges.begin(); i != edges.end(); ++i )
         {
             printf( "  %p %g %g : ", i->corner, i->corner->p.x, i->corner->p.y );
-            
+
             printf( "%s ", i->left ? "[" : "]" );
-            
+
             if ( i->reversed )
             {
                 printf( "[r] %g %g, ", i->edge->v[ 1 ]->p.x, i->edge->v[ 1 ]->p.y );
-            
+
                 switch ( i->edge->kind )
                 {
                 case PATH_LINE_TO: break;
@@ -1042,13 +1044,13 @@ static void sweep_plane( path* path )
                         i->edge->c[ 0 ].x, i->edge->c[ 0 ].y ); break;
                 default: break;
                 }
-                
+
                 printf( "%g %g\n", i->edge->v[ 0 ]->p.x, i->edge->v[ 0 ]->p.y );
             }
             else
             {
                 printf( "%g %g, ", i->edge->v[ 0 ]->p.x, i->edge->v[ 0 ]->p.y );
-            
+
                 switch ( i->edge->kind )
                 {
                 case PATH_LINE_TO: break;
@@ -1061,7 +1063,7 @@ static void sweep_plane( path* path )
                         i->edge->c[ 1 ].x, i->edge->c[ 1 ].y ); break;
                 default: break;
                 }
-                
+
                 printf( "%g %g\n", i->edge->v[ 1 ]->p.x, i->edge->v[ 1 ]->p.y );
             }
         }
@@ -1073,7 +1075,7 @@ static void sweep_plane( path* path )
         for ( auto i = edges.begin(); i != edges.end(); ++i )
         {
             sweep_edge* e = &*i;
-        
+
             if ( e->corner != corner )
                 continue;
 
@@ -1086,11 +1088,11 @@ static void sweep_plane( path* path )
                 {
                     /*
                         End of a filled interval:
-                        
+
                             \###/
                              \#/
                               +
-                    
+
                     */
 
 #ifdef DEBUG_SWEEP
@@ -1098,18 +1100,18 @@ static void sweep_plane( path* path )
 #endif
 
                     sweep_slice( path, e, &*j, corner );
-                    
+
                 }
                 else
                 {
                     /*
                         End of a hole:
-                        
+
                           ##\   /##
                           ###\ /###
                           ####+####
                     */
-                    
+
 #ifdef DEBUG_SWEEP
                     printf( "END HOLE\n" );
 #endif
@@ -1119,13 +1121,13 @@ static void sweep_plane( path* path )
 
                     sweep_slice( path, &*h, &*i, corner );
                     sweep_slice( path, &*j, &*k, corner );
-                
+
                 }
-                
+
                 // Remove both edges.
                 edges.erase( i );
                 edges.erase( j );
-                
+
                 found = true;
                 break;
             }
@@ -1138,11 +1140,11 @@ static void sweep_plane( path* path )
                             +##
                             |##
                     */
-                    
+
 #ifdef DEBUG_SWEEP
                     printf( "LEFT\n" );
 #endif
-                    
+
                     sweep_slice( path, e, &*j, corner );
                 }
                 else
@@ -1156,11 +1158,11 @@ static void sweep_plane( path* path )
 #ifdef DEBUG_SWEEP
                     printf( "RIGHT\n" );
 #endif
-                    
+
                     auto h = i; --h;
                     sweep_slice( path, &*h, e, corner );
                 }
-            
+
                 // Move to next corner along edge.
                 if ( e->reversed )
                 {
@@ -1180,22 +1182,22 @@ static void sweep_plane( path* path )
                         e->corner = e->corner->e[ 1 ]->v[ 1 ];
                     }
                 }
-                
+
                 found = true;
                 break;
             }
 
         }
-        
+
         if ( found )
             continue;
-        
+
         // Find the interval containing the corner.
         auto after = edges.begin();
         for ( ; after != edges.end(); ++after )
         {
             sweep_edge* e = &*after;
-        
+
             // Follow edge until we found one that intersects the plane.
             path_edge* original = e->edge;
             if ( e->reversed )
@@ -1226,15 +1228,15 @@ static void sweep_plane( path* path )
 
             // Work out where plane intersects this edge.
             float x = solve_edge( e->edge, corner->p.y );
-            
-            
+
+
             // If the corner is left of the edge, then this edge is after the
             // corner.
             if ( corner->p.x < x )
             {
                 break;
             }
-            
+
         }
 
         bool is_hole = false;
@@ -1242,12 +1244,12 @@ static void sweep_plane( path* path )
         {
             /*
                 Start of a hole.
-                
+
                   ####+####
                   ###/ \###
                   ##/   \##
             */
-            
+
 #ifdef DEBUG_SWEEP
             printf( "START HOLE\n" );
 #endif
@@ -1258,20 +1260,20 @@ static void sweep_plane( path* path )
         {
             /*
                 Start of a new filled interval.
-                
+
                       +
                      /#\
                     /###\
             */
-            
+
 #ifdef DEBUG_SWEEP
             printf( "START INTERVAL\n" );
 #endif
-            
+
             is_hole = false;
         }
-        
-        
+
+
         // corner->e[ 0 ] and corner->[ 1 ] are new edges.
         sweep_edge left;
         left.top = corner;
@@ -1279,12 +1281,12 @@ static void sweep_plane( path* path )
         left.corner = left.edge->v[ 0 ];
         left.reversed = true;
         left.left = false;
-        
+
         while ( ! left.corner->is_corner )
         {
             left.corner = left.corner->e[ 0 ]->v[ 0 ];
         }
-        
+
         sweep_edge right;
         right.top = corner;
         right.edge = corner->e[ 1 ];
@@ -1301,7 +1303,7 @@ static void sweep_plane( path* path )
         // Work out which edge is to the left.  If we get this wrong then
         // the topology of the figure breaks and we get corrupted slices or
         // encounter the bad case above.
-        
+
         // Look at control point closest to corner.
         float2 tleft;
         switch ( corner->e[ 0 ]->kind )
@@ -1310,7 +1312,7 @@ static void sweep_plane( path* path )
         case PATH_QUAD_TO:  tleft = corner->e[ 0 ]->c[ 0 ];         break;
         case PATH_CUBIC_TO: tleft = corner->e[ 0 ]->c[ 1 ];         break;
         }
-        
+
         float2 tright;
         switch ( corner->e[ 1 ]->kind )
         {
@@ -1327,7 +1329,7 @@ static void sweep_plane( path* path )
             std::swap( left, right );
         }
 
-        
+
         if ( is_hole )
             right.left = true;
         else
@@ -1340,10 +1342,10 @@ static void sweep_plane( path* path )
             // if the winding is opposite to the winding of the figure it's
             // contained in.
             auto before = after; --before;
-        
+
             assert( before->reversed != after->reversed );
             assert( left.reversed != right.reversed );
-            
+
             if ( before->reversed == left.reversed )
             {
                 // Snip this entire loop from the figure, as it may well have
@@ -1358,16 +1360,16 @@ static void sweep_plane( path* path )
                 while ( v != corner );
                 continue;
             }
-        
+
             // End slice above the hole.
             sweep_slice( path, &*before, &*after, corner );
         }
-        
+
         edges.insert( after, left );
         edges.insert( after, right );
-        
+
     }
-        
+
 
 }
 
@@ -1403,7 +1405,7 @@ static float approx_solve(
             e = e->v[ 1 ]->e[ 1 ];
         }
     }
-    
+
     return solve_edge( e, y );
 }
 
@@ -1424,7 +1426,7 @@ static float approx_error(
         float x = approx_solve( a, b, reversed, p.y );
         error += fabsf( p.x - x );
     }
-    
+
     return error / SAMPLES;
 }
 
@@ -1434,7 +1436,7 @@ static bool approx_slice(
 {
     float2 ta;
     float2 tb;
-    
+
     if ( reversed )
     {
         switch ( a->e[ 0 ]->kind )
@@ -1444,7 +1446,7 @@ static bool approx_slice(
         case PATH_CUBIC_TO: ta = a->e[ 0 ]->c[ 1 ];     break;
         default: break;
         }
-        
+
         switch ( b->e[ 1 ]->kind )
         {
         case PATH_LINE_TO:  tb = b->e[ 1 ]->v[ 1 ]->p;  break;
@@ -1462,7 +1464,7 @@ static bool approx_slice(
         case PATH_CUBIC_TO: ta = a->e[ 1 ]->c[ 0 ];     break;
         default: break;
         }
-    
+
         switch ( b->e[ 0 ]->kind )
         {
         case PATH_LINE_TO:  tb = b->e[ 0 ]->v[ 0 ]->p;  break;
@@ -1471,31 +1473,31 @@ static bool approx_slice(
         default: break;
         }
     }
-    
+
     ta = normalize( ta - a->p );
     tb = normalize( tb - b->p );
-    
+
     float2 c = b->p - a->p;
-  
+
     /*
         Intersection of two lines:
-        
+
         http://math.stackexchange.com/questions/406864/intersection-of-two-lines-in-vector-form
         http://en.wikipedia.org/wiki/Cramer's_rule
-    
+
         | ta.x -tb.x | | s | = | c.x |
         | ta.y -tb.y | | t |   | c.y |
-     
+
     */
-    
+
     float sdet = c.x * -tb.y - -tb.x * c.y;
     float tdet = ta.x * c.y - c.x * ta.y;
     float det = ta.x * -tb.y - -tb.x * ta.y;
-    
+
     if ( ( fabsf( sdet ) < EPSILON && fabsf( tdet ) < EPSILON )
             || fabsf( det ) < EPSILON )
     {
-        // Probably linear.    
+        // Probably linear.
         *out = qbezier
         (
             a->p,
@@ -1504,12 +1506,12 @@ static bool approx_slice(
         );
         return true;
     }
-        
+
     if ( fabsf( det ) > EPSILON )
     {
         float s = sdet / det;
         float t = tdet / det;
-        
+
         if ( s > EPSILON && t > EPSILON )
         {
             *out = qbezier
@@ -1525,7 +1527,7 @@ static bool approx_slice(
 
     // Tangents don't meet at a point (or, meeting point is behind).  Return
     // a line.
-    
+
     *out = qbezier
     (
         a->p,
@@ -1546,13 +1548,13 @@ static void approx_split( path* path, path_slice* s )
     // Attempt approximation.
     bool lvalid = approx_slice( s->tl, s->bl, s->lreversed, &s->left );
     bool rvalid = approx_slice( s->tr, s->br, s->rreversed, &s->right );
-    
+
 
     // Errors in approximation can cause sides of slice to have different extents.
     s->right.p[ 0 ].y = s->left.p[ 0 ].y;
     s->right.p[ 2 ].y = s->left.p[ 2 ].y;
-    
-    
+
+
     // Check approximation.
     if ( lvalid && approx_error( s->tl, s->bl, s->lreversed, &s->left ) < MAXERROR
          && rvalid && approx_error( s->tr, s->br, s->rreversed, &s->right ) < MAXERROR )
@@ -1567,19 +1569,19 @@ static void approx_split( path* path, path_slice* s )
         return;
     }
 
-    
+
     // Otherwise, split.
     float split_y = ( s->tl->p.y + s->bl->p.y ) * 0.5f;
     path_vertex* lv = split_edge( path, s->tl, s->bl, s->lreversed, split_y );
     path_vertex* rv = split_edge( path, s->tr, s->br, s->rreversed, split_y );
 
-    
+
     // If the split failed (picked one of the corner vertices), return.
     if ( lv == s->tl || lv == s->bl || rv == s->tr || rv == s->br )
     {
         return;
     }
-    
+
 
     // Continue approximating both split slices.
     path_slice slice;
@@ -1589,15 +1591,15 @@ static void approx_split( path* path, path_slice* s )
     slice.br = s->br;
     slice.lreversed = s->lreversed;
     slice.rreversed = s->rreversed;
-    
+
     s->bl = lv;
     s->br = rv;
-    
+
     approx_split( path, s );
     approx_split( path, &slice );
-    
+
     path->s.push_back( slice );
-    
+
 
 }
 
@@ -1624,7 +1626,7 @@ static void write_svg( path* path, const char* filename )
 {
     FILE* f = fopen( filename, "w" );
     fprintf( f, "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\">\n" );
-    
+
     fprintf( f, "  <path stroke=\"black\" stroke-width=\"5\" fill=\"none\" d=\"\n" );
     for ( size_t i = 0; i < path->p.size(); )
     {
@@ -1633,21 +1635,21 @@ static void write_svg( path* path, const char* filename )
         {
         case PATH_END:
             break;
-            
+
         case PATH_MOVE_TO:
         {
             float2 p = path->p.at( i++ ).p;
             fprintf( f, "    M %g %g\n", p.x, p.y );
             break;
         }
-        
+
         case PATH_LINE_TO:
         {
             float2 p = path->p.at( i++ ).p;
             fprintf( f, "    L %g %g\n", p.x, p.y );
             break;
         }
-        
+
         case PATH_QUAD_TO:
         {
             float2 a = path->p.at( i++ ).p;
@@ -1655,7 +1657,7 @@ static void write_svg( path* path, const char* filename )
             fprintf( f, "    Q %g %g %g %g\n", a.x, a.y, p.x, p.y );
             break;
         }
-        
+
         case PATH_CUBIC_TO:
         {
             float2 a = path->p.at( i++ ).p;
@@ -1664,11 +1666,11 @@ static void write_svg( path* path, const char* filename )
             fprintf( f, "    C %g %g %g %g %g %g\n", a.x, a.y, b.x, b.y, p.x, p.y );
             break;
         }
-        
+
         }
     }
     fprintf( f, "  />\n" );
-    
+
     for ( const auto& vertex : path->v )
     {
         if ( ! vertex->is_corner )
@@ -1677,7 +1679,7 @@ static void write_svg( path* path, const char* filename )
             "stroke=\"red\" stroke-width=\"5\" fill=\"none\" />\n",
                 vertex->p.x, vertex->p.y );
     }
-    
+
     for ( const auto& slice : path->s )
     {
         fprintf( f, "  <path stroke=\"blue\" stroke-width=\"5\" fill=\"none\" "
@@ -1686,9 +1688,9 @@ static void write_svg( path* path, const char* filename )
                 slice.tr->p.x, slice.tr->p.y,
                 slice.br->p.x, slice.br->p.y,
                 slice.bl->p.x, slice.bl->p.y );
-                
+
     }
-    
+
     fprintf( f, "</svg>\n" );
     fclose( f );
 }
@@ -1737,7 +1739,7 @@ font_slicer::font_slicer( const char* path )
         p->glyphs.push_back( (char32_t)char_code );
         char_code = FT_Get_Next_Char( p->face, char_code, &glyph_index );
     }
-    
+
     // Parse all kerning information.
     for ( size_t i = 0; i < p->glyphs.size(); ++i )
     {
@@ -1757,7 +1759,7 @@ font_slicer::font_slicer( const char* path )
             }
         }
     }
-    
+
 }
 
 font_slicer::~font_slicer()
@@ -1766,7 +1768,7 @@ font_slicer::~font_slicer()
     FT_Done_FreeType( p->library );
 }
 
-    
+
 float font_slicer::units_per_em()
 {
     return p->face->units_per_EM;
@@ -1809,7 +1811,7 @@ font_glyph font_slicer::glyph_info_for_char( char32_t c )
 
     // Load character image.
     FT_Load_Char( p->face, c, FT_LOAD_NO_SCALE );
-    
+
     // Make it bolder.
 //    FT_Outline_Embolden( &p->face->glyph->outline, 5 * ( 1 << 6 ) / 2 );
 
@@ -1823,10 +1825,10 @@ font_glyph font_slicer::glyph_info_for_char( char32_t c )
 
     // Debug.
 //    write_svg( &path, stringf( "c%02X.svg", (int)c ).c_str() );
-    
+
 
     approx( &path );
-    
+
     // Return sliced glyph.
     font_glyph g;
     g.c = c;
@@ -1842,7 +1844,7 @@ font_glyph font_slicer::glyph_info_for_char( char32_t c )
         slice.right = path.s[ i ].right;
         g.slices.push_back( slice );
     }
-    
+
     std::sort
     (
         g.slices.begin(),
@@ -1852,10 +1854,10 @@ font_glyph font_slicer::glyph_info_for_char( char32_t c )
             return a.left.p[ 0 ].y < b.left.p[ 0 ].y;
         }
     );
-    
+
     return g;
 }
-    
+
 
 size_t font_slicer::kern_count()
 {

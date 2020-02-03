@@ -2,7 +2,9 @@
 //  strpath.h
 //
 //  Created by Edmund Kapusniak on 28/12/2012.
-//  Copyright (c) 2012 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2012 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 

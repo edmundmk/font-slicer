@@ -2,7 +2,9 @@
 //  ogl_context.cpp
 //
 //  Created by Edmund Kapusniak on 26/12/2014.
-//  Copyright (c) 2014 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2014 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -49,7 +51,7 @@ GLuint ogl_context::compile_shader(
     };
     glShaderSource( shader, 2, sources, lengths );
     glCompileShader( shader );
-    
+
     GLint status = GL_FALSE;
     glGetShaderiv( shader, GL_COMPILE_STATUS, &status );
     if ( ! status )
@@ -61,7 +63,7 @@ GLuint ogl_context::compile_shader(
         glGetShaderInfoLog( shader, (GLsizei)log.size(), NULL, log.data() );
         fprintf( stderr, "%s\n", log.data() );
     }
-    
+
     return shader;
 }
 
@@ -72,7 +74,7 @@ void ogl_context::link_program( GLuint program )
     glBindFragDataLocation( program, 0, "_out_color" );
 
     glLinkProgram( program );
-    
+
     GLint status = GL_FALSE;
     glGetProgramiv( program, GL_LINK_STATUS, &status );
     if ( ! status )

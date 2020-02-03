@@ -2,7 +2,9 @@
 //  font_slicer.h
 //
 //  Created by Edmund Kapusniak on 22/12/2014.
-//  Copyright (c) 2014 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2014 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -20,7 +22,7 @@
     Loads a font and approximates each glyph with a set of slices.  Each slice
     is a trapezoid where the left and right edges are quadratic bezier curves.
 
-    
+
         -------/-----'-.--------------  maxy
               /            .
              /                .
@@ -35,7 +37,7 @@
         ascender    : distance from baseline to top of font, in pixels.
         descender   : distance from baseline to bottom of font, in pixels.
         line_height : distance between consecutive lines.
-        
+
     Y is up.  Note that the descender is negative when below the baseline.
 
 */
@@ -71,7 +73,7 @@ public:
 
     explicit font_slicer( const char* path );
     ~font_slicer();
-    
+
     float units_per_em();
 
     float ascender();
@@ -82,7 +84,7 @@ public:
     char32_t glyph_char( size_t index );
     font_glyph glyph_info( size_t index );
     font_glyph glyph_info_for_char( char32_t c );
-    
+
     size_t kern_count();
     font_kern kern( size_t index );
 

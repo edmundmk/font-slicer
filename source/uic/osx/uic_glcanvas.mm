@@ -2,7 +2,9 @@
 //  uic_glcanvas.mm
 //
 //  Created by Edmund Kapusniak on 29/11/2014.
-//  Copyright (c) 2014 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2014 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -21,16 +23,16 @@ struct uic_glcanvas_impl
     uic_glcanvas* outer;
     UICOpenGLView*  view;
     std::unique_ptr< ogl_context > ogl;
-    
+
     void setup_context();
     void draw();
-    
+
     void on_mouse_down( float2 p, uic_button button );
     void on_mouse_up( float2 p, uic_button button );
     void on_mouse_move( float2 p );
     void on_scroll( float2 p, float amount );
     void on_zoom( float2 p, float amount );
-    
+
 };
 
 

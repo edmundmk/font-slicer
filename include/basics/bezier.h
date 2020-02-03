@@ -2,7 +2,9 @@
 //  bezier.h
 //
 //  Created by Edmund Kapusniak on 19/12/2014.
-//  Copyright (c) 2014 Edmund Kapusniak. All rights reserved.
+//  Copyright (c) 2014 Edmund Kapusniak. Licensed under the GNU General Public
+//  License, version 3. See the LICENSE file in the project root for full
+//  license information.
 //
 
 
@@ -23,8 +25,8 @@ struct lbezier
 {
     lbezier();
     lbezier( float2 p0, float2 p1 );
-    
-    
+
+
     float2  evaluate( float t ) const;
     void    split( float t, lbezier out_c[ 2 ] ) const;
     float2  derivative() const;
@@ -32,10 +34,10 @@ struct lbezier
     bool    is_monotonic_y() const;
     size_t  solve_x( float x, float* out_t ) const;
     size_t  solve_y( float y, float* out_t ) const;
-    
-    
+
+
     float2 p[ 2 ];
-    
+
 };
 
 
@@ -57,7 +59,7 @@ struct qbezier
     bool    is_monotonic_y() const;
     size_t  solve_x( float x, float out_t[ 2 ] ) const;
     size_t  solve_y( float y, float out_t[ 2 ] ) const;
-    
+
 
     float2 p[ 3 ];
 
@@ -84,7 +86,7 @@ struct cbezier
     size_t  solve_x( float x, float out_t[ 3 ] ) const;
     size_t  solve_y( float y, float out_t[ 3 ] ) const;
     bool    solve_self_intersection( float out_t[ 2 ] ) const;
-    
+
 
     float2 p[ 4 ];
 
